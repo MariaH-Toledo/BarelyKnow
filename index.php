@@ -9,49 +9,21 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BarelyKnow</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/cssbootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/fontbootstrap-icons.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #0a0a23;
-            color: #fff;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
-        .btn-custom {
-            width: 200px;
-            font-size: 1.2rem;
-            margin: 10px 0;
-        }
-        .modal-content {
-            background-color: #fff;
-            color: #000;
-            border-radius: 10px;
-        }
-        h1 {
-            font-weight: bold;
-            margin-bottom: 0.3em;
-        }
-        .subtitulo {
-            font-size: 1.1rem;
-            color: #ccc;
-            margin-bottom: 2em;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="public/style/index.css">
 </head>
-<body>
-    <div class="text-center">
-        <h1>BarelyKnow</h1>
-        <p class="subtitulo">Frase de efeito que eu não sei qual vai ser ainda</p>
 
-        <button class="btn btn-success btn-lg btn-custom" data-bs-toggle="modal" data-bs-target="#modalCriar">
+<body class="body-index">
+    <div class="text-center">
+        <h1 class="titulo-index">BarelyKnow</h1>
+        <p class="subtitulo-index">Frase de efeito que eu não sei qual vai ser ainda</p>
+
+        <button class="btn btn-lg btn-custom-index btn-criar" data-bs-toggle="modal" data-bs-target="#modalCriar">
             <i class="bi bi-plus-circle"></i> Criar Sala
         </button>
         <br>
-        <button class="btn btn-primary btn-lg btn-custom" data-bs-toggle="modal" data-bs-target="#modalEntrar">
+        <button class="btn btn-lg btn-custom-index btn-entrar" data-bs-toggle="modal" data-bs-target="#modalEntrar">
             <i class="bi bi-box-arrow-in-right"></i> Entrar em Sala
         </button>
     </div>
@@ -61,10 +33,10 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalCriarLabel">Criar Sala</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="view/criar_sala.php" method="POST">
+                    <form id="formCriar" action="view/criar_sala.php" method="POST">
                         <div class="mb-3">
                             <label class="form-label">Seu nome:</label>
                             <input type="text" name="nome" class="form-control" required>
@@ -74,7 +46,7 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
                             <label class="form-label">Categoria:</label>
                             <select name="categoria" class="form-select" required>
                                 <option value="">Selecione uma categoria</option>
-                                <?php while($cat = $categorias->fetch_assoc()) { ?>
+                                <?php while ($cat = $categorias->fetch_assoc()) { ?>
                                     <option value="<?= $cat['id_categoria'] ?>">
                                         <?= htmlspecialchars($cat['nome_categoria']) ?>
                                     </option>
@@ -111,10 +83,10 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalEntrarLabel">Entrar em Sala</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="view/entrar_sala.php" method="POST">
+                    <form id="formEntrar" action="view/entrar_sala.php" method="POST">
                         <div class="mb-3">
                             <label class="form-label">Seu nome:</label>
                             <input type="text" name="nome" class="form-control" required>
@@ -132,6 +104,9 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
             </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="public/js/index.js"></script>
 </body>
 </html>

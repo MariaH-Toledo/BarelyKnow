@@ -47,6 +47,7 @@ CREATE TABLE respostas(
     FOREIGN KEY (id_pergunta) REFERENCES perguntas(id_pergunta)
 );
 
-INSERT INTO categorias (nome_categoria)
-VALUES ('Esportes'), ('Conhecimentos Gerais'), ('Tecnologia');
+INSERT INTO categorias (nome_categoria) VALUES ('Esportes'), ('Conhecimentos Gerais'), ('Tecnologia');
+SELECT * FROM categorias;
+SELECT * FROM salas;
 

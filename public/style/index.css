@@ -1,0 +1,47 @@
+.body-index{
+    background-color: #0a0a23;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+.btn-custom-index {
+    width: 220px;
+    font-size: 1.1rem;
+    margin: 10px 0;
+}
+.modal-content{
+    background-color: #fff;
+    color: #000;
+    border-radius: 12px;
+}
+.titulo-index{
+    font-weight: bold;
+    margin-bottom: 0.3em;
+}
+.subtitulo-index{
+    font-size: 1.1rem;
+    color: #ccc;
+    margin-bottom: 2em;
+}
+.btn-criar {
+    background-color: #6620a8;
+    color: #fff;
+    border: none;
+}
+
+.btn-criar:hover {
+    background-color: #8f4ac7;
+}
+
+.btn-entrar {
+    background-color: #b63978;
+    color: #fff;
+    border: none;
+}
+
+.btn-entrar:hover {
+    background-color: #cc5791;
+}
