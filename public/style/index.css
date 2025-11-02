@@ -16,6 +16,24 @@
     margin: 10px 0;
 }
 
+.btn-criar-index{
+    color: var(--cor-branco);
+    background-color: var(--cor-azul2);
+}
+
+.btn-criar-index:hover{
+    background-color: var(--cor-azul);
+}
+
+.btn-entrar-index{
+    color: var(--cor-branco);
+    background-color: var(--cor-rosa2);
+}
+
+.btn-entrar-index:hover{
+    background-color: var(--cor-rosa);
+}
+
 .btn-criar{
     background-color: var(--cor-azul2);
     color: var(--cor-branco);
@@ -50,4 +68,39 @@
     font-size: 1.1rem;
     color: #ccc;
     margin-bottom: 2em;
+}
+
+.logo-index {
+    max-width: 300px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 1.5rem;
+}
+
+.form-control-dark,
+.form-select-dark {
+    background-color: #2a2a2a !important;
+    border-color: #444 !important;
+    color: var(--cor-branco) !important;
+}
+
+.form-control-dark:focus,
+.form-select-dark:focus {
+    background-color: #333 !important;
+    border-color: var(--cor-azul) !important;
+    color: var(--cor-branco) !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+.form-control-dark::placeholder {
+    color: #999 !important;
+}
+
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.form-control-dark[type="number"]::-webkit-outer-spin-button,
+.form-control-dark[type="number"]::-webkit-inner-spin-button {
+    filter: invert(0.8);
 }
