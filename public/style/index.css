@@ -37,10 +37,11 @@
 }
 
 .modal-content{
-    background-color: #fff;
-    color: #000;
+    background-color: var(--cor-fundo2);
+    color: var(--cor-branco);
     border-radius: 12px;
 }
+
 .titulo-index{
     font-weight: bold;
     margin-bottom: 0.3em;
@@ -49,23 +50,4 @@
     font-size: 1.1rem;
     color: #ccc;
     margin-bottom: 2em;
-}
-.btn-criar {
-    background-color: #6620a8;
-    color: #fff;
-    border: none;
-}
-
-.btn-criar:hover {
-    background-color: #8f4ac7;
-}
-
-.btn-entrar {
-    background-color: #b63978;
-    color: #fff;
-    border: none;
-}
-
-.btn-entrar:hover {
-    background-color: #cc5791;
 }

@@ -12,12 +12,13 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="public/style/index.css">
+    <link rel="icon" href="public/img/icon-nav-bar.png">
 </head>
 
 <body class="body-index">
     <div class="text-center">
         <h1 class="titulo-index">BarelyKnow</h1>
-        <p class="subtitulo-index">Frase de efeito que eu não sei qual vai ser ainda</p>
+        <p class="subtitulo-index">Hora de colocar os conhecimentos em prática... ou pelo menos a sorte!</p>
 
         <button class="btn btn-lg btn-custom-index btn-criar" data-bs-toggle="modal" data-bs-target="#modalCriar">
             <i class="bi bi-plus-circle"></i> Criar Sala
