@@ -40,4 +40,46 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    const formEntrar = document.querySelector("#formEntrar");
+
+        if (formEntrar) {
+            formEntrar.addEventListener("submit", async (e) => {
+                e.preventDefault();
+            
+                const formData = new FormData(formEntrar);
+            
+                try {
+                    const res = await fetch("view/entrar_sala.php", {
+                        method: "POST",
+                        body: formData
+                    });
+                
+                    const data = await res.json();
+                
+                    if (data.status === "ok") {
+                        Swal.fire({
+                            icon: "success",
+                            title: "Você entrou na sala!",
+                            confirmButtonText: "Ir para o lobby"
+                        }).then(() => {
+                            window.location.href = `view/lobby.php?codigo=${data.codigo}`;
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Erro",
+                            text: data.mensagem || "Não foi possível entrar na sala."
+                        });
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Erro inesperado",
+                        text: "Falha na conexão com o servidor."
+                    });
+                }
+            });
+        }   
+
 });
