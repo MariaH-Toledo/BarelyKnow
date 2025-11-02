@@ -1,17 +1,41 @@
+@import url(style.css);
+
 .body-index{
-    background-color: #0a0a23;
-    color: #fff;
+    background-color: var(--cor-fundo);
+    color: var(--cor-branco);
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
 }
-.btn-custom-index {
+
+.btn-custom-index{
     width: 220px;
     font-size: 1.1rem;
     margin: 10px 0;
 }
+
+.btn-criar{
+    background-color: var(--cor-azul2);
+    color: var(--cor-branco);
+    border: none;
+}
+
+.btn-criar:hover{
+    background-color: var(--cor-azul);
+}
+
+.btn-entrar{
+    background-color: var(--cor-rosa2);
+    color: #fff;
+    border: none;
+}
+
+.btn-entrar:hover{
+    background-color: var(--cor-rosa);
+}
+
 .modal-content{
     background-color: #fff;
     color: #000;
