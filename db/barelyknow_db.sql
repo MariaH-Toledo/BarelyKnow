@@ -49,5 +49,7 @@ CREATE TABLE respostas(
 
 INSERT INTO categorias (nome_categoria) VALUES ('Esportes'), ('Conhecimentos Gerais'), ('Tecnologia');
 SELECT * FROM categorias;
+SELECT * FROM jogadores;
+SELECT * FROM perguntas;
+SELECT * FROM respostas;
 SELECT * FROM salas;
-

@@ -26,12 +26,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $sql_jogador = "INSERT INTO jogadores (nome, id_sala, is_host)
                         VALUES ('$nome', $id_sala, 1)";
-        $conn->query($sql_jogador);
+        if ($conn->query($sql_jogador)) {
+            $id_jogador = $conn->insert_id;
+            
+            session_start();
+            $_SESSION['id_jogador'] = $id_jogador;
+            $_SESSION['nome_jogador'] = $nome;
+            $_SESSION['id_sala'] = $id_sala;
+            $_SESSION['eh_host'] = true;
 
-        echo json_encode([
-            "status" => "ok",
-            "codigo" => $codigo
-        ]);
+            echo json_encode([
+                "status" => "ok",
+                "codigo" => $codigo
+            ]);
+        } else {
+            echo json_encode([
+                "status" => "erro", 
+                "mensagem" => "Erro ao criar jogador: " . $conn->error
+            ]);
+        }
     } else {
         echo json_encode([
             "status" => "erro",
