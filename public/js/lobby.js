@@ -1,319 +1,373 @@
-class LobbyController {
+class Lobby {
     constructor() {
-        this.ultimaAtualizacao = 0;
-        this.init();
+        this.carregando = false;
+        this.ehHost = window.ehHost;
+        this.idJogador = window.idJogador; // Adicione esta linha
+        
+        console.log('🔧 Lobby iniciado:');
+        console.log('  this.ehHost:', this.ehHost, '(tipo:', typeof this.ehHost, ')');
+        console.log('  this.idJogador:', this.idJogador);
+        console.log('  window.ehHost:', window.ehHost);
+        console.log('  window.idJogador:', window.idJogador);
+        
+        this.iniciar();
     }
 
-    init() {
-        this.configurarEventos();
-        this.iniciarAtualizacaoAutomatica();
-        this.atualizarLobby();
-    }
+    async carregarJogadores() {
+        if (this.carregando) return;
+        this.carregando = true;
 
-    configurarEventos() {
-        const btnFechar = document.querySelector("#btnFechar");
-        if (btnFechar) {
-            btnFechar.addEventListener("click", () => this.fecharSala());
+        try {
+            const jogadores = await this.ajax('listar_jogadores');
+            this.jogadores = jogadores; // Guarda os jogadores para usar em outros métodos
+            this.mostrarJogadores(jogadores);
+            
+            this.atualizarContador(jogadores.length);
+            
+            // CORREÇÃO: usar this.ehHost em vez de ehHost
+            if (this.ehHost) {
+                const btnIniciar = document.getElementById('btnIniciar');
+                btnIniciar.disabled = jogadores.length < 2;
+                
+                if (jogadores.length < 2) {
+                    btnIniciar.title = `Mínimo 2 jogadores (${jogadores.length}/2)`;
+                } else {
+                    btnIniciar.title = 'Clique para iniciar o jogo';
+                }
+            }
+        } catch (error) {
+            console.error('Erro:', error);
         }
 
-        const btnSair = document.querySelector("#btnSair");
-        if (btnSair) {
-            btnSair.addEventListener("click", () => this.sairSala());
-        }
+        this.carregando = false;
+    }
 
-        const btnIniciar = document.querySelector("#btnIniciar");
-        if (btnIniciar) {
-            btnIniciar.addEventListener("click", () => this.iniciarJogo());
+    atualizarContador(total) {
+        const contador = document.getElementById('contadorJogadores');
+        if (contador) {
+            contador.textContent = total;
         }
     }
 
-    get swalDarkTheme() {
-        return {
-            color: 'white',
-            background: '#1a1a1a',
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33'
-        };
-    }
+    mostrarJogadores(jogadores) {
+        const container = document.getElementById('listaJogadores');
+    
+        if (jogadores.length === 0) {
+            container.innerHTML = '<div style="color: var(--cor-branco2); text-align: center;">Nenhum jogador</div>';
+            return;
+        }
 
-    async fecharSala() {
-        const confirm = await Swal.fire({
-            title: "Fechar Sala?",
-            text: "Todos os jogadores serão desconectados e a sala será encerrada permanentemente.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Sim, fechar sala",
-            cancelButtonText: "Cancelar",
-            confirmButtonColor: "#d33",
-            cancelButtonColor: "#6c757d",
-            ...this.swalDarkTheme
+        let html = '';
+        jogadores.forEach(jogador => {
+            const ehEu = (jogador.id_jogador == idJogador);
+            const ehEsteHost = (jogador.is_host == 1);
+
+            // DEBUG: Verificar o que está vindo do banco
+            console.log(`👤 Jogador: ${jogador.nome}, ID: ${jogador.id_jogador}, is_host: ${jogador.is_host}, EhEu: ${ehEu}`);
+
+            // CORREÇÃO: Host pode remover qualquer jogador que não seja ele mesmo
+            const possoRemover = (this.ehHost && !ehEu);
+
+            console.log(`🔧 Pode remover ${jogador.nome}: ${possoRemover} (Host: ${this.ehHost}, Não é eu: ${!ehEu})`);
+
+            html += `
+                <div class="jogador-item">
+                    <div class="jogador-nome">
+                        ${ehEsteHost ? '👑' : '👤'} ${jogador.nome}
+                        ${ehEu ? '<span class="badge-vc">Você</span>' : ''}
+                        ${ehEsteHost ? '<span class="badge-host">Host</span>' : ''}
+                    </div>
+                    ${possoRemover ? `
+                        <button class="btn-remover" onclick="lobby.removerJogador(${jogador.id_jogador}, '${this.escapeHtml(jogador.nome)}')">
+                            <i class="bi bi-person-x"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            `;
         });
 
-        if (confirm.isConfirmed) {
-            try {
-                const res = await fetch("../utils/fechar_sala.php", {
-                    method: "POST",
-                    headers: { 
-                        "Content-Type": "application/x-www-form-urlencoded" 
-                    },
-                    body: `codigo=${encodeURIComponent(codigoSala)}`
+        container.innerHTML = html;
+        document.getElementById('contadorJogadores').textContent = jogadores.length;
+
+        if (this.ehHost) {
+            const btnIniciar = document.getElementById('btnIniciar');
+            btnIniciar.disabled = jogadores.length < 2;
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    configurarBotoes() {
+        console.log('🔧 Configurando botões - Host:', this.ehHost);
+        
+        if (this.ehHost) {
+            console.log('🔧 Configurando botões do HOST');
+            document.getElementById('btnIniciar').onclick = () => this.iniciarJogo();
+            document.getElementById('btnFechar').onclick = () => this.fecharSala();
+        } else {
+            console.log('🔧 Configurando botões do JOGADOR');
+            document.getElementById('btnSair').onclick = () => this.sairSala();
+        }
+    }
+
+    async atualizarLobby() {
+        await this.carregarJogadores();
+        
+        // CORREÇÃO: usar this.ehHost em vez de ehHost
+        if (!this.ehHost) {
+            const status = await this.ajax('verificar_status');
+            if (status.status === 'iniciada') {
+                window.location.href = `game.php?codigo=${codigoSala}`;
+            }
+        }
+    }
+
+    async iniciarJogo() {
+        const { value: confirmar } = await Swal.fire({
+            title: 'Iniciar Jogo?',
+            html: `
+                <div style="text-align: left; color: var(--cor-branco);">
+                    <p>Tem certeza que deseja iniciar o jogo?</p>
+                    <p><strong>Configurações:</strong></p>
+                    <ul>
+                        <li>${this.jogadores.length} jogadores conectados</li>
+                        <li>${this.jogadores.find(j => j.is_host == 1)?.nome || 'Você'} é o Host</li>
+                    </ul>
+                </div>
+            `,
+            icon: 'question',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-azul)',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, iniciar!',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--cor-amarela2)',
+            cancelButtonColor: 'var(--cor-rosa)'
+        });
+
+        if (confirmar) {
+            const resultado = await this.ajax('iniciar_jogo');
+            if (resultado.status === 'ok') {
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Jogo Iniciado!',
+                    text: 'Redirecionando...',
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)',
+                    iconColor: 'var(--cor-azul)',
+                    timer: 2000,
+                    showConfirmButton: false
                 });
-
-                const data = await res.json();
-
-                if (data.status === "ok") {
-                    Swal.fire({
-                        icon: "success",
-                        title: "Sala fechada!",
-                        text: "A sala foi encerrada com sucesso.",
-                        timer: 1500,
-                        showConfirmButton: false,
-                        ...this.swalDarkTheme
-                    }).then(() => {
-                        window.location.href = "../index.php";
-                    });
-                } else {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Erro",
-                        text: data.mensagem || "Não foi possível fechar a sala.",
-                        ...this.swalDarkTheme
-                    });
-                }
-            } catch (err) {
-                Swal.fire({
-                    icon: "error",
-                    title: "Erro de conexão",
-                    text: "Não foi possível conectar ao servidor.",
-                    ...this.swalDarkTheme
+                window.location.href = `game.php?codigo=${codigoSala}`;
+            } else {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: resultado.mensagem,
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)',
+                    iconColor: 'var(--cor-rosa)'
                 });
             }
         }
     }
 
     async sairSala() {
-        const confirm = await Swal.fire({
-            title: "Sair da Sala?",
-            text: "Você será removido desta sala.",
-            icon: "question",
+        const { value: confirmar } = await Swal.fire({
+            title: 'Sair da Sala?',
+            text: 'Você poderá entrar novamente se tiver o código.',
+            icon: 'warning',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-azul)',
             showCancelButton: true,
-            confirmButtonText: "Sim, sair",
-            cancelButtonText: "Cancelar",
-            confirmButtonColor: "#ffc107",
-            cancelButtonColor: "#6c757d",
-            ...this.swalDarkTheme
+            confirmButtonText: 'Sim, sair!',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--cor-azul2)',
+            cancelButtonColor: 'var(--cor-rosa)'
         });
 
-        if (confirm.isConfirmed) {
-            try {
-                const res = await fetch("../utils/sair_sala.php", {
-                    method: "POST",
-                    headers: { 
-                        "Content-Type": "application/x-www-form-urlencoded" 
-                    },
-                    body: `codigo=${encodeURIComponent(codigoSala)}`
-                });
-
-                const data = await res.json();
-
-                if (data.status === "ok") {
-                    Swal.fire({
-                        icon: "success",
-                        title: "Você saiu da sala!",
-                        text: "Você foi removido da sala com sucesso.",
-                        timer: 1500,
-                        showConfirmButton: false,
-                        ...this.swalDarkTheme
-                    }).then(() => {
-                        window.location.href = "../index.php";
-                    });
-                } else {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Erro",
-                        text: data.mensagem || "Não foi possível sair da sala.",
-                        ...this.swalDarkTheme
-                    });
-                }
-            } catch (err) {
-                Swal.fire({
-                    icon: "error",
-                    title: "Erro de conexão",
-                    text: "Não foi possível conectar ao servidor.",
-                    ...this.swalDarkTheme
-                });
-            }
-        }
-    }
-
-    async iniciarJogo() {
-        try {
-            const res = await fetch("../utils/iniciar_jogo.php", {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/x-www-form-urlencoded" 
-                },
-                body: `codigo=${encodeURIComponent(codigoSala)}`
-            });
-
-            const data = await res.json();
-
-            if (data.status === "ok") {
-                window.location.href = `game.php?codigo=${codigoSala}`;
+        if (confirmar) {
+            const resultado = await this.ajax('sair_sala');
+            if (resultado.status === 'ok') {
+                window.location.href = '../index.php';
             } else {
-                Swal.fire({
-                    icon: "error",
-                    title: "Erro",
-                    text: data.mensagem || "Não foi possível iniciar o jogo.",
-                    ...this.swalDarkTheme
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: resultado.mensagem,
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)',
+                    iconColor: 'var(--cor-rosa)'
                 });
             }
-        } catch (err) {
-            Swal.fire({
-                icon: "error",
-                title: "Erro de conexão",
-                text: "Não foi possível conectar ao servidor.",
-                ...this.swalDarkTheme
-            });
         }
     }
 
-    async removerJogador(idJogador, nomeJogador) {
-        const confirm = await Swal.fire({
-            title: "Remover Jogador?",
-            html: `Deseja remover <strong>${nomeJogador}</strong> da sala?`,
-            icon: "warning",
+    async fecharSala() {
+        console.log('🚪 Tentando fechar sala...');
+        const { value: confirmar } = await Swal.fire({
+            title: 'Fechar Sala?',
+            html: `
+                <div style="text-align: left; color: var(--cor-branco);">
+                    <p><strong>Tem certeza que deseja fechar a sala?</strong></p>
+                    <p>⚠️ Todos os jogadores serão desconectados</p>
+                    <p>⚠️ A sala será excluída permanentemente</p>
+                </div>
+            `,
+            icon: 'warning',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-rosa)',
             showCancelButton: true,
-            confirmButtonText: "Sim, remover",
-            cancelButtonText: "Cancelar",
-            confirmButtonColor: "#d33",
-            cancelButtonColor: "#6c757d",
-            ...this.swalDarkTheme
+            confirmButtonText: 'Sim, fechar!',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--cor-rosa)',
+            cancelButtonColor: 'var(--cor-azul)'
         });
 
-        if (confirm.isConfirmed) {
+        if (confirmar) {
+            console.log('✅ Confirmou fechar sala');
             try {
-                const res = await fetch("../utils/remover_jogador.php", {
-                    method: "POST",
-                    headers: { 
-                        "Content-Type": "application/x-www-form-urlencoded" 
-                    },
-                    body: `codigo_sala=${encodeURIComponent(codigoSala)}&id_jogador=${idJogador}`
-                });
-
-                const data = await res.json();
-
-                if (data.status === "ok") {
-                    Swal.fire({
-                        icon: "success",
-                        title: "Jogador removido!",
-                        text: `${nomeJogador} foi removido da sala.`,
+                const resultado = await this.ajax('fechar_sala');
+                console.log('📦 Resultado fechar sala:', resultado);
+                
+                if (resultado.status === 'ok') {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Sala Fechada!',
+                        text: 'Redirecionando...',
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)',
+                        iconColor: 'var(--cor-azul)',
                         timer: 1500,
-                        showConfirmButton: false,
-                        ...this.swalDarkTheme
+                        showConfirmButton: false
                     });
+                    window.location.href = '../index.php';
                 } else {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Erro",
-                        text: data.mensagem || "Não foi possível remover o jogador.",
-                        ...this.swalDarkTheme
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: resultado.mensagem || 'Erro desconhecido',
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)',
+                        iconColor: 'var(--cor-rosa)'
                     });
                 }
-            } catch (err) {
-                Swal.fire({
-                    icon: "error",
-                    title: "Erro de conexão",
-                    text: "Não foi possível conectar ao servidor.",
-                    ...this.swalDarkTheme
+            } catch (error) {
+                console.error('❌ Erro ao fechar sala:', error);
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Erro de conexão',
+                    text: 'Não foi possível conectar ao servidor',
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)',
+                    iconColor: 'var(--cor-rosa)'
                 });
             }
         }
     }
 
-    async atualizarJogadores() {
-        try {
-            const res = await fetch(`../utils/listar_jogadores.php?codigo=${codigoSala}&t=${Date.now()}`);
-            const data = await res.json();
-            
-            const container = document.querySelector("#listaJogadores");
-            
-            if (data.length > 0) {
-                let html = '';
-                data.forEach(jogador => {
-                    const isHost = jogador.is_host == 1;
-                    const isCurrentPlayer = (jogador.id_jogador == idJogadorAtual);
-                    
-                    html += `
-                        <div class="d-flex justify-content-between align-items-center p-2 border-bottom border-secondary">
-                            <div class="d-flex align-items-center">
-                                <span class="me-2">${isHost ? '👑' : '👤'}</span>
-                                <span class="${isCurrentPlayer ? 'text-primary fw-bold' : 'text-light'}">
-                                    ${jogador.nome} ${isCurrentPlayer ? '(Você)' : ''}
-                                </span>
-                            </div>
-                            ${ehHost && !isHost ? `
-                                <button class="btn btn-sm btn-outline-danger btn-remover" 
-                                        data-id="${jogador.id_jogador}" 
-                                        data-nome="${jogador.nome}">
-                                    <i class="bi bi-person-x"></i>
-                                </button>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
+    async removerJogador(id, nome) {
+        console.log('👥 Tentando remover jogador:', id, nome);
+        const { value: confirmar } = await Swal.fire({
+            title: 'Remover Jogador?',
+            html: `
+                <div style="text-align: left; color: var(--cor-branco);">
+                    <p>Tem certeza que deseja remover <strong>${nome}</strong> da sala?</p>
+                    <p>O jogador será desconectado imediatamente.</p>
+                </div>
+            `,
+            icon: 'question',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-rosa)',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, remover!',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--cor-rosa)',
+            cancelButtonColor: 'var(--cor-azul)'
+        });
 
-                document.querySelectorAll('.btn-remover').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const id = e.target.closest('.btn-remover').dataset.id;
-                        const nome = e.target.closest('.btn-remover').dataset.nome;
-                        this.removerJogador(id, nome);
+        if (confirmar) {
+            console.log('✅ Confirmou remover jogador');
+            try {
+                const resultado = await this.ajax('remover_jogador', {id_jogador: id});
+                console.log('📦 Resultado remover jogador:', resultado);
+                
+                if (resultado.status === 'ok') {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Jogador Removido!',
+                        text: `${nome} foi removido da sala`,
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)',
+                        iconColor: 'var(--cor-azul)',
+                        timer: 1500,
+                        showConfirmButton: false
                     });
+                    this.carregarJogadores();
+                } else {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: resultado.mensagem || 'Erro desconhecido',
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)',
+                        iconColor: 'var(--cor-rosa)'
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Erro ao remover jogador:', error);
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Erro de conexão',
+                    text: 'Não foi possível conectar ao servidor',
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)',
+                    iconColor: 'var(--cor-rosa)'
                 });
-            } else {
-                container.innerHTML = '<div class="text-muted">Nenhum jogador na sala...</div>';
             }
-        } catch (error) {
-            console.error('Erro ao atualizar jogadores:', error);
         }
     }
 
-    async verificarStatusJogo() {
-        try {
-            const res = await fetch(`../utils/verificar_status_sala.php?codigo=${codigoSala}&t=${Date.now()}`);
-            const data = await res.json();
-            
-            if (data.status === 'iniciada') {
-                window.location.href = `game.php?codigo=${codigoSala}`;
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Erro ao verificar status:', error);
-            return false;
-        }
-    }
-
-    async atualizarLobby() {
-        const agora = Date.now();
+    async ajax(acao, dadosExtras = {}) {
+        const formData = new FormData();
+        formData.append('acao', acao);
+        formData.append('codigo', codigoSala);
         
-        if (agora - this.ultimaAtualizacao > 1000) {
-            await this.atualizarJogadores();
-            
-            if (!ehHost) {
-                await this.verificarStatusJogo();
-            }
-            
-            this.ultimaAtualizacao = agora;
+        for (let key in dadosExtras) {
+            formData.append(key, dadosExtras[key]);
         }
+
+        console.log(`📡 Fazendo requisição: ${acao}`, Object.fromEntries(formData));
+        
+        const response = await fetch('../utils/lobby_actions.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const resultado = await response.json();
+        console.log(`📦 Resposta ${acao}:`, resultado);
+        
+        return resultado;
     }
 
-    iniciarAtualizacaoAutomatica() {
-        setInterval(() => this.atualizarLobby(), 2000);
+    mostrarErro(mensagem) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: mensagem || 'Algo deu errado',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-rosa)'
+        });
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    new LobbyController();
-});
+const lobby = new Lobby();

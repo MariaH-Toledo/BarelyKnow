@@ -104,3 +104,20 @@
 .form-control-dark[type="number"]::-webkit-inner-spin-button {
     filter: invert(0.8);
 }
+
+.swal2-popup {
+    border: 2px solid var(--cor-azul) !important;
+    border-radius: 12px !important;
+}
+
+.swal2-title {
+    color: var(--cor-branco) !important;
+}
+
+.swal2-html-container {
+    color: var(--cor-branco2) !important;
+}
+
+.sweetalert-dark {
+    background: var(--cor-fundo2) !important;
+}
