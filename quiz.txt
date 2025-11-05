@@ -1,0 +1,2227 @@
+- db/barelyknow_db.sql:
+CREATE DATABASE barelyknow;
+USE barelyknow;
+
+CREATE TABLE categorias(
+    id_categoria INT AUTO_INCREMENT PRIMARY KEY,
+    nome_categoria VARCHAR(50) UNIQUE
+);
+
+CREATE TABLE salas(
+    id_sala INT AUTO_INCREMENT PRIMARY KEY,
+    codigo_sala VARCHAR(6) UNIQUE,
+    id_categoria INT,
+    rodadas INT,
+    tempo_resposta INT,
+    status ENUM('aberta', 'iniciada', 'encerrada') DEFAULT 'aberta',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria)
+);
+
+CREATE TABLE jogadores(
+    id_jogador INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100),
+    pontos INT DEFAULT 0,
+    id_sala INT,
+    is_host BOOLEAN DEFAULT 0,
+    FOREIGN KEY (id_sala) REFERENCES salas(id_sala) ON DELETE CASCADE
+);
+
+CREATE TABLE perguntas(
+    id_pergunta INT AUTO_INCREMENT PRIMARY KEY,
+    id_categoria INT,
+    pergunta TEXT,
+    alternativa1 VARCHAR(255),
+    alternativa2 VARCHAR(255),
+    alternativa3 VARCHAR(255),
+    alternativa4 VARCHAR(255),
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria)
+);
+
+CREATE TABLE respostas(
+    id_resposta INT AUTO_INCREMENT PRIMARY KEY,
+    id_jogador INT,
+    id_pergunta INT,
+    resposta_escolhida VARCHAR(255),
+    correta BOOLEAN,
+    tempo_resposta INT,
+    FOREIGN KEY (id_jogador) REFERENCES jogadores(id_jogador),
+    FOREIGN KEY (id_pergunta) REFERENCES perguntas(id_pergunta)
+);
+
+SELECT * FROM categorias;
+SELECT * FROM jogadores;
+SELECT * FROM perguntas;
+SELECT * FROM respostas;
+SELECT * FROM salas;
+
+INSERT INTO categorias (nome_categoria) VALUES 
+('Esportes'),
+('Conhecimentos Gerais'), 
+('Tecnologia'),
+('Cultura Pop'),
+('Cinema'),
+('Animação');
+
+INSERT INTO perguntas (id_categoria, pergunta, alternativa1, alternativa2, alternativa3, alternativa4) VALUES
+(1, 'Quantos jogadores formam um time de futebol em campo?', '11 jogadores', '10 jogadores', '9 jogadores', '12 jogadores'),
+(1, 'Qual país ganhou mais Copas do Mundo?', 'Brasil', 'Alemanha', 'Itália', 'Argentina'),
+(1, 'Quantos pontos vale um touchdown no futebol americano?', '6 pontos', '7 pontos', '3 pontos', '2 pontos'),
+(1, 'Qual esporte é jogado em uma quadra de 28x15m?', 'Basquete', 'Vôlei', 'Tênis', 'Handebol'),
+(1, 'Quantos sets são necessários para vencer no vôlei?', '3 sets', '2 sets', '4 sets', '5 sets'),
+(1, 'Qual nadador tem mais medalhas olímpicas?', 'Michael Phelps', 'Mark Spitz', 'Ian Thorpe', 'César Cielo'),
+(1, 'Quantos buracos tem um campo de golfe padrão?', '18 buracos', '9 buracos', '12 buracos', '15 buracos'),
+(1, 'Qual esporte usa uma "bola oval"?', 'Rugby', 'Futebol', 'Basquete', 'Vôlei'),
+(1, 'Quantos jogadores tem um time de beisebol?', '9 jogadores', '7 jogadores', '10 jogadores', '8 jogadores'),
+(1, 'Qual país inventou o judô?', 'Japão', 'China', 'Coreia', 'Brasil'),
+(1, 'Quantos metros tem uma maratona?', '42.195 metros', '40.000 metros', '45.000 metros', '38.000 metros'),
+(1, 'Qual esporte é conhecido como "xadrez humano"?', 'Futebol Americano', 'Basquete', 'Tênis', 'Natação'),
+(1, 'Quantos rounds tem uma luta de boxe profissional?', '12 rounds', '10 rounds', '15 rounds', '8 rounds'),
+(1, 'Qual atleta é chamado de "Raio"?', 'Usain Bolt', 'Michael Johnson', 'Carl Lewis', 'Asafa Powell'),
+(1, 'Quantos jogadores tem um time de hóquei no gelo?', '6 jogadores', '5 jogadores', '7 jogadores', '8 jogadores'),
+(1, 'Qual esporte usa um "birdie"?', 'Badminton', 'Tênis', 'Vôlei', 'Futebol'),
+(1, 'Quantos Grand Slams existem no tênis?', '4 torneios', '3 torneios', '5 torneios', '6 torneios'),
+(1, 'Qual país sediou as Olimpíadas de 2016?', 'Brasil', 'China', 'Inglaterra', 'Estados Unidos'),
+(1, 'Quantos jogadores tem um time de futsal?', '5 jogadores', '6 jogadores', '4 jogadores', '7 jogadores'),
+(1, 'Qual esporte é jogado em um "ringue"?', 'Boxe', 'Judô', 'Luta Livre', 'Ginástica'),
+
+(2, 'Qual é a capital do Brasil?', 'Brasília', 'São Paulo', 'Rio de Janeiro', 'Belo Horizonte'),
+(2, 'Quantos continentes existem?', '7 continentes', '5 continentes', '6 continentes', '8 continentes'),
+(2, 'Qual é o maior oceano do mundo?', 'Oceano Pacífico', 'Oceano Atlântico', 'Oceano Índico', 'Oceano Ártico'),
+(2, 'Quem pintou a Mona Lisa?', 'Leonardo da Vinci', 'Vincent van Gogh', 'Pablo Picasso', 'Michelangelo'),
+(2, 'Qual é o elemento químico representado por "O"?', 'Oxigênio', 'Ouro', 'Ósmio', 'Oganésson'),
+(2, 'Quantos lados tem um hexágono?', '6 lados', '5 lados', '7 lados', '8 lados'),
+(2, 'Qual é o planeta conhecido como "Planeta Vermelho"?', 'Marte', 'Vênus', 'Júpiter', 'Saturno'),
+(2, 'Quem escreveu "Dom Casmurro"?', 'Machado de Assis', 'José de Alencar', 'Lima Barreto', 'Carlos Drummond'),
+(2, 'Qual é a moeda do Japão?', 'Iene', 'Won', 'Yuan', 'Dólar'),
+(2, 'Quantos ossos tem o corpo humano?', '206 ossos', '200 ossos', '210 ossos', '195 ossos'),
+(2, 'Qual é o maior animal terrestre?', 'Elefante africano', 'Girafa', 'Hipopótamo', 'Rinoceronte'),
+(2, 'Quem descobriu a penicilina?', 'Alexander Fleming', 'Louis Pasteur', 'Marie Curie', 'Albert Einstein'),
+(2, 'Qual é a capital da França?', 'Paris', 'Londres', 'Roma', 'Berlim'),
+(2, 'Quantos anos tem um século?', '100 anos', '50 anos', '200 anos', '1000 anos'),
+(2, 'Qual é o rio mais longo do mundo?', 'Rio Amazonas', 'Rio Nilo', 'Rio Mississippi', 'Rio Yangtzé'),
+(2, 'Quem foi o primeiro homem na Lua?', 'Neil Armstrong', 'Buzz Aldrin', 'Yuri Gagarin', 'John Glenn'),
+(2, 'Qual é o país mais populoso do mundo?', 'China', 'Índia', 'Estados Unidos', 'Indonésia'),
+(2, 'Quantos planetas existem no sistema solar?', '8 planetas', '9 planetas', '7 planetas', '10 planetas'),
+(2, 'Qual é a língua mais falada no mundo?', 'Mandarim', 'Inglês', 'Espanhol', 'Hindi'),
+(2, 'Quem escreveu "Romeu e Julieta"?', 'William Shakespeare', 'Charles Dickens', 'Jane Austen', 'Victor Hugo'),
+
+(3, 'O que significa HTML?', 'HyperText Markup Language', 'HighTech Modern Language', 'Hyper Transfer Markup Language', 'HighText Machine Language'),
+(3, 'Qual empresa criou o Windows?', 'Microsoft', 'Apple', 'Google', 'IBM'),
+(3, 'O que significa "CPU"?', 'Central Processing Unit', 'Computer Processing Unit', 'Central Program Unit', 'Computer Program Utility'),
+(3, 'Qual destes NÃO é um sistema operacional?', 'Google Chrome', 'Windows', 'Linux', 'macOS'),
+(3, 'Quantos bits tem um byte?', '8 bits', '4 bits', '16 bits', '32 bits'),
+(3, 'Qual empresa criou o iPhone?', 'Apple', 'Samsung', 'Google', 'Microsoft'),
+(3, 'O que significa "URL"?', 'Uniform Resource Locator', 'Universal Resource Link', 'Uniform Reference Location', 'Universal Reference Locator'),
+(3, 'Qual destes é um navegador web?', 'Google Chrome', 'Microsoft Word', 'Adobe Photoshop', 'Windows Media Player'),
+(3, 'O que significa "PDF"?', 'Portable Document Format', 'Personal Data File', 'Public Document Form', 'Printed Document File'),
+(3, 'Qual empresa criou o Android?', 'Google', 'Apple', 'Microsoft', 'Samsung'),
+(3, 'O que significa "Wi-Fi"?', 'Wireless Fidelity', 'Wireless Frequency', 'Wide Frequency', 'Wireless Internet'),
+(3, 'Qual destes NÃO é uma rede social?', 'Microsoft Excel', 'Facebook', 'Instagram', 'Twitter'),
+(3, 'O que significa "RAM"?', 'Random Access Memory', 'Read Access Memory', 'Random Available Memory', 'Read Available Memory'),
+(3, 'Qual empresa criou o Photoshop?', 'Adobe', 'Microsoft', 'Apple', 'Corel'),
+(3, 'O que significa "HTTP"?', 'HyperText Transfer Protocol', 'HighTech Transfer Protocol', 'Hyper Transfer Text Protocol', 'High Transfer Text Protocol'),
+(3, 'Qual destes é um antivírus?', 'Avast', 'Google Drive', 'Microsoft Word', 'Adobe Reader'),
+(3, 'O que significa "SSD"?', 'Solid State Drive', 'Super Speed Disk', 'System Storage Device', 'Solid Storage Drive'),
+(3, 'Qual empresa criou a linguagem Java?', 'Sun Microsystems', 'Microsoft', 'Google', 'Apple'),
+(3, 'O que significa "VPN"?', 'Virtual Private Network', 'Virtual Public Network', 'Verified Private Network', 'Virtual Protocol Network'),
+(3, 'Qual destes é um banco de dados?', 'MySQL', 'Java', 'Python', 'HTML'),
+
+(4, 'Quem canta a música "Shake It Off"?', 'Taylor Swift', 'Ariana Grande', 'Billie Eilish', 'Lady Gaga'),
+(4, 'Qual série tem a casa "Stark" e "Lannister"?', 'Game of Thrones', 'Stranger Things', 'The Walking Dead', 'Breaking Bad'),
+(4, 'Quem é o criador da Marvel?', 'Stan Lee', 'Jack Kirby', 'Steve Ditko', 'Walt Disney'),
+(4, 'Qual cantor é conhecido como "Rei do Pop"?', 'Michael Jackson', 'Elvis Presley', 'Prince', 'Justin Bieber'),
+(4, 'Qual banda britânica é conhecida como "Fab Four"?', 'The Beatles', 'Rolling Stones', 'Queen', 'Led Zeppelin'),
+(4, 'Quem interpreta o Homem de Ferro no MCU?', 'Robert Downey Jr.', 'Chris Evans', 'Chris Hemsworth', 'Mark Ruffalo'),
+(4, 'Qual é o nome real da Lady Gaga?', 'Stefani Germanotta', 'Madonna Ciccone', 'Beyoncé Knowles', 'Katy Perry'),
+(4, 'Qual série tem os personagens "Eleven" e "Mike"?', 'Stranger Things', 'Riverdale', 'Outer Banks', 'The 100'),
+(4, 'Quem canta "Bohemian Rhapsody"?', 'Queen', 'The Beatles', 'Rolling Stones', 'Led Zeppelin'),
+(4, 'Qual atriz interpretou Hermione em Harry Potter?', 'Emma Watson', 'Emma Stone', 'Jennifer Lawrence', 'Kristen Stewart'),
+(4, 'Quem é o criador do Facebook?', 'Mark Zuckerberg', 'Bill Gates', 'Steve Jobs', 'Elon Musk'),
+(4, 'Qual cantora é conhecida como "Rainha do Pop"?', 'Madonna', 'Britney Spears', 'Rihanna', 'Beyoncé'),
+(4, 'Qual série tem "Walter White" e "Jesse Pinkman"?', 'Breaking Bad', 'Better Call Saul', 'The Sopranos', 'Narcos'),
+(4, 'Quem canta "Bad Guy"?', 'Billie Eilish', 'Ariana Grande', 'Dua Lipa', 'Olivia Rodrigo'),
+(4, 'Qual é o nome do mascote da Nintendo?', 'Mario', 'Sonic', 'Pikachu', 'Crash Bandicoot'),
+(4, 'Quem interpreta o Coringa no filme de 2019?', 'Joaquin Phoenix', 'Heath Ledger', 'Jared Leto', 'Jack Nicholson'),
+(4, 'Qual banda tem o álbum "The Dark Side of the Moon"?', 'Pink Floyd', 'The Beatles', 'Led Zeppelin', 'Queen'),
+(4, 'Quem é conhecido como "Beyhive"?', 'Fãs da Beyoncé', 'Fãs da Taylor Swift', 'Fãs da Rihanna', 'Fãs da Lady Gaga'),
+(4, 'Qual série tem "Sherlock Holmes" moderno?', 'Sherlock', 'Elementary', 'Mentalist', 'Castle'),
+(4, 'Quem canta "Blinding Lights"?', 'The Weeknd', 'Drake', 'Post Malone', 'Ed Sheeran'),
+
+(5, 'Qual dos seguintes filmes foi protagonizado pelo Charlie Chaplin?', 'Tempos Modernos', 'Star Wars', 'Toy Story', 'Frozen'),
+(5, 'Quem dirigiu "Titanic"?', 'James Cameron', 'Steven Spielberg', 'Christopher Nolan', 'Quentin Tarantino'),
+(5, 'Qual filme ganhou o Oscar de Melhor Filme em 2020?', 'Parasita', '1917', 'Joker', 'Once Upon a Time in Hollywood'),
+(5, 'Quem interpreta Jack Sparrow?', 'Johnny Depp', 'Orlando Bloom', 'Leonardo DiCaprio', 'Brad Pitt'),
+(5, 'Qual filme tem a frase "May the Force be with you"?', 'Star Wars', 'Star Trek', 'Guardians of the Galaxy', 'The Matrix'),
+(5, 'Quem dirigiu "O Poderoso Chefão"?', 'Francis Ford Coppola', 'Martin Scorsese', 'Alfred Hitchcock', 'Stanley Kubrick'),
+(5, 'Qual ator interpreta James Bond em "007 - Cassino Royale"?', 'Daniel Craig', 'Pierce Brosnan', 'Sean Connery', 'Roger Moore'),
+(5, 'Qual filme tem um personagem chamado "Forrest Gump"?', 'Forrest Gump', 'Rain Man', 'The Curious Case of Benjamin Button', 'Big'),
+(5, 'Quem interpreta a Rainha Elizabeth em "The Crown"?', 'Claire Foy', 'Emma Corrin', 'Olivia Colman', 'Helena Bonham Carter'),
+(5, 'Qual filme ganhou 11 Oscars?', 'Titanic', 'Ben-Hur', 'The Lord of the Rings', 'La La Land'),
+(5, 'Quem é o diretor de "Interestelar"?', 'Christopher Nolan', 'Steven Spielberg', 'James Cameron', 'Ridley Scott'),
+(5, 'Qual filme tem os personagens "Mufasa" e "Simba"?', 'O Rei Leão', 'Aladdin', 'A Bela e a Fera', 'Mulan'),
+(5, 'Quem interpreta Tony Stark no MCU?', 'Robert Downey Jr.', 'Chris Evans', 'Chris Hemsworth', 'Mark Ruffalo'),
+(5, 'Qual filme tem a frase "I will be back"?', 'O Exterminador do Futuro', 'Duro de Matar', 'Rambo', 'Mad Max'),
+(5, 'Quem dirigiu "Cidade de Deus"?', 'Fernando Meirelles', 'José Padilha', 'Walter Salles', 'Breno Silveira'),
+(5, 'Qual filme tem o personagem "Vito Corleone"?', 'O Poderoso Chefão', 'Scarface', 'Os Intocáveis', 'Casino'),
+(5, 'Quem interpreta Neo em "The Matrix"?', 'Keanu Reeves', 'Laurence Fishburne', 'Hugo Weaving', 'Carrie-Anne Moss'),
+(5, 'Qual filme ganhou o primeiro Oscar de Melhor Filme?', 'Wings', 'Sunrise', 'The Jazz Singer', 'Metropolis'),
+(5, 'Quem é conhecido como "Rei do Terror" no cinema?', 'Stephen King', 'Alfred Hitchcock', 'Wes Craven', 'John Carpenter'),
+(5, 'Qual filme tem a música "My Heart Will Go On"?', 'Titanic', 'Ghost', 'The Bodyguard', 'Dirty Dancing'),
+
+(6, 'Qual é o irmão do Gumball?', 'Darwin', 'Jake', 'Elsa', 'Bob Esponja'),
+(6, 'Qual estúdio criou "Toy Story"?', 'Pixar', 'Disney', 'DreamWorks', 'Studio Ghibli'),
+(6, 'Qual é o nome do peixe em "Procurando Nemo"?', 'Nemo', 'Dory', 'Marlin', 'Gill'),
+(6, 'Quem é o vilão em "A Pequena Sereia"?', 'Úrsula', 'Malévola', 'Jafar', 'Scar'),
+(6, 'Qual é o nome do dragão em "Como Treinar Seu Dragão"?', 'Banguela', 'Solsitício', 'Fúria da Noite', 'Vermelho'),
+(6, 'Qual personagem diz "Até mais, e obrigado pelos peixes!"?', 'Dory', 'Nemo', 'Marlin', 'Pearl'),
+(6, 'Qual estúdio criou "A Viagem de Chihiro"?', 'Studio Ghibli', 'Pixar', 'Disney', 'DreamWorks'),
+(6, 'Qual é o nome real do Homem-Aranha nos filmes da Marvel?', 'Peter Parker', 'Miles Morales', 'Tony Stark', 'Steve Rogers'),
+(6, 'Qual personagem vive em um abacaxi no fundo do mar?', 'Bob Esponja', 'Patrick', 'Lula Molusco', 'Senhor Siriguejo'),
+(6, 'Qual é o nome do rato na Disney?', 'Mickey Mouse', 'Jerry', 'Stuart Little', 'Remy'),
+(6, 'Qual filme tem os personagens "Remy" e "Linguini"?', 'Ratatouille', 'Os Incríveis', 'Carros', 'Procurando Nemo'),
+(6, 'Qual é o nome do urso na Disney?', 'Zé Colmeia', 'Poo', 'Baloo', 'Winnie the Pooh'),
+(6, 'Qual personagem diz "Hakuna Matata"?', 'Timão e Pumba', 'Simba e Nala', 'Zazu', 'Rafiki'),
+(6, 'Qual estúdio criou "Shrek"?', 'DreamWorks', 'Disney', 'Pixar', 'Blue Sky'),
+(6, 'Qual é o nome da princesa em "Frozen"?', 'Elsa', 'Anna', 'Rapunzel', 'Merida'),
+(6, 'Qual personagem tem um gancho no lugar da mão?', 'Capitão Gancho', 'Jack Sparrow', 'Barba Negra', 'Long John Silver'),
+(6, 'Qual é o nome do cavalo em "Toy Story"?', 'Bulleseye', 'Pégasus', 'Maximus', 'Álamo'),
+(6, 'Qual filme tem os personagens "Judy Hopps" e "Nick Wilde"?', 'Zootopia', 'Madagascar', 'A Era do Gelo', 'Kung Fu Panda'),
+(6, 'Qual é o nome do panda em "Kung Fu Panda"?', 'Po', 'Shifu', 'Tigresa', 'Mestre Oogway'),
+(6, 'Qual personagem é conhecido como "O Máscara"?', 'Shrek', 'Gato de Botas', 'Burro', 'Lord Farquaad');
+
+- db/conexao.php:
+<?php
+$host = "localhost";
+$user = "root";
+$password = "";
+$db = "barelyknow";
+
+$conn = new mysqli($host, $user, $password, $db);
+
+if ($conn->connect_error) {
+    die("Falha na conexão: " . $conn->connect_error);
+}
+
+$conn->set_charset("utf8mb4");
+?>
+
+- public/js/game.js:
+class GameController {
+    constructor() {
+        this.rodadaAtual = 1;
+        this.tempoRestante = 0;
+        this.timerInterval = null;
+        this.perguntaAtual = null;
+        this.respostaEnviada = false;
+        this.mapeamentoRespostas = [];
+        this.init();
+    }
+
+    async init() {
+        await this.carregarPergunta();
+        this.iniciarTimer();
+    }
+
+    async carregarPergunta() {
+        try {
+            const response = await fetch(`../utils/obter_pergunta.php?codigo=${codigoSala}&rodada=${this.rodadaAtual}`);
+            const data = await response.json();
+
+            if (data.status === 'ok') {
+                this.perguntaAtual = data.pergunta;
+                this.exibirPergunta();
+                this.respostaEnviada = false;
+            } else if (data.status === 'fim') {
+                this.finalizarJogo();
+            } else {
+                console.error('Erro:', data.mensagem);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar pergunta:', error);
+        }
+    }
+
+    exibirPergunta() {
+        document.getElementById('perguntaTexto').textContent = this.perguntaAtual.pergunta;
+        
+        // Embaralhar alternativas (a primeira sempre é a correta no banco)
+        const alternativas = [
+            this.perguntaAtual.alternativa1, // Resposta correta
+            this.perguntaAtual.alternativa2,
+            this.perguntaAtual.alternativa3,
+            this.perguntaAtual.alternativa4
+        ];
+        
+        // Embaralhar mantendo controle da correta
+        this.mapeamentoRespostas = [0, 1, 2, 3];
+        for (let i = this.mapeamentoRespostas.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.mapeamentoRespostas[i], this.mapeamentoRespostas[j]] = 
+            [this.mapeamentoRespostas[j], this.mapeamentoRespostas[i]];
+        }
+
+        // Exibir alternativas embaralhadas
+        document.getElementById('textoAlternativa1').textContent = alternativas[this.mapeamentoRespostas[0]];
+        document.getElementById('textoAlternativa2').textContent = alternativas[this.mapeamentoRespostas[1]];
+        document.getElementById('textoAlternativa3').textContent = alternativas[this.mapeamentoRespostas[2]];
+        document.getElementById('textoAlternativa4').textContent = alternativas[this.mapeamentoRespostas[3]];
+
+        document.getElementById('numeroRodada').textContent = this.rodadaAtual;
+        this.configurarEventosAlternativas();
+    }
+
+    configurarEventosAlternativas() {
+        const alternativas = document.querySelectorAll('.alternativa');
+        alternativas.forEach(alt => {
+            alt.onclick = () => this.selecionarAlternativa(alt);
+        });
+    }
+
+    selecionarAlternativa(alternativaElement) {
+        if (this.respostaEnviada) return;
+
+        // Remover seleção anterior
+        document.querySelectorAll('.alternativa').forEach(alt => {
+            alt.classList.remove('selecionada');
+        });
+
+        // Selecionar nova
+        alternativaElement.classList.add('selecionada');
+        
+        const alternativaIndex = parseInt(alternativaElement.dataset.alternativa);
+        this.enviarResposta(alternativaIndex);
+    }
+
+    async enviarResposta(alternativaIndex) {
+        if (this.respostaEnviada) return;
+        
+        this.respostaEnviada = true;
+        const tempoRespostaUsado = tempoResposta - this.tempoRestante;
+        
+        // Verificar se a resposta está correta (índice 0 no mapeamento é a correta)
+        const respostaCorreta = (this.mapeamentoRespostas[alternativaIndex - 1] === 0);
+        
+        try {
+            const response = await fetch('../utils/registrar_resposta.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `id_jogador=${idJogador}&id_pergunta=${this.perguntaAtual.id_pergunta}&resposta_escolhida=${alternativaIndex}&correta=${respostaCorreta ? 1 : 0}&tempo_resposta=${tempoRespostaUsado}`
+            });
+
+            const data = await response.json();
+            this.mostrarFeedback(respostaCorreta);
+            
+            setTimeout(() => {
+                this.proximaRodada();
+            }, 2000);
+
+        } catch (error) {
+            console.error('Erro ao enviar resposta:', error);
+        }
+    }
+
+    mostrarFeedback(correta) {
+        const feedback = document.getElementById('feedback');
+        if (correta) {
+            feedback.innerHTML = '<div class="alert alert-success">✓ Resposta Correta!</div>';
+        } else {
+            feedback.innerHTML = '<div class="alert alert-danger">✗ Resposta Incorreta</div>';
+        }
+    }
+
+    iniciarTimer() {
+        this.tempoRestante = tempoResposta;
+        this.atualizarTimer();
+        
+        this.timerInterval = setInterval(() => {
+            this.tempoRestante--;
+            this.atualizarTimer();
+            
+            if (this.tempoRestante <= 0) {
+                clearInterval(this.timerInterval);
+                if (!this.respostaEnviada) {
+                    this.enviarResposta(0); // Resposta em branco
+                }
+            }
+        }, 1000);
+    }
+
+    atualizarTimer() {
+        document.getElementById('timer').textContent = this.tempoRestante;
+        
+        const timerElement = document.getElementById('timer');
+        if (this.tempoRestante <= 5) {
+            timerElement.style.color = '#ff4444';
+        } else if (this.tempoRestante <= 10) {
+            timerElement.style.color = '#ffaa00';
+        } else {
+            timerElement.style.color = 'white';
+        }
+    }
+
+    proximaRodada() {
+        this.rodadaAtual++;
+        
+        if (this.rodadaAtual > totalRodadas) {
+            this.finalizarJogo();
+        } else {
+            this.carregarPergunta();
+            this.iniciarTimer();
+            document.getElementById('feedback').innerHTML = '';
+        }
+    }
+
+    async finalizarJogo() {
+        try {
+            await fetch('../utils/finalizar_jogo.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `codigo=${codigoSala}`
+            });
+
+            window.location.href = `ranking.php?codigo=${codigoSala}`;
+        } catch (error) {
+            console.error('Erro ao finalizar jogo:', error);
+        }
+    }
+}
+
+// Iniciar o jogo quando a página carregar
+document.addEventListener('DOMContentLoaded', () => {
+    new GameController();
+});
+
+- public/js/lobby.js:
+class Lobby {
+    constructor() {
+        this.carregando = false;
+        this.jogadores = [];
+        this.iniciar();
+    }
+
+    async iniciar() {
+        console.log('🎮 Lobby iniciado');
+        
+        // Configurar polling automático
+        this.iniciarPolling();
+        
+        // Configurar botões
+        this.configurarBotoes();
+        
+        // Carregar jogadores inicial
+        await this.carregarJogadores();
+    }
+
+    iniciarPolling() {
+        // Atualizar a cada 2 segundos
+        setInterval(() => {
+            this.atualizarLobby();
+        }, 2000);
+    }
+
+    async carregarJogadores() {
+        if (this.carregando) return;
+        this.carregando = true;
+
+        try {
+            console.log('🔄 Carregando jogadores...');
+            const resultado = await this.ajax('listar_jogadores');
+            
+            // 🚨 CORREÇÃO: Verificar se a resposta tem status de erro
+            if (resultado.status === 'erro') {
+                console.error('❌ Erro do servidor:', resultado.mensagem);
+                this.mostrarJogadores([]); // Mostrar lista vazia
+                return;
+            }
+
+            // 🚨 CORREÇÃO: Garantir que seja um array
+            const jogadores = Array.isArray(resultado) ? resultado : [];
+            console.log('👥 Jogadores processados:', jogadores);
+            
+            this.jogadores = jogadores;
+            this.mostrarJogadores(jogadores);
+            this.atualizarContador(jogadores.length);
+            
+            if (window.ehHost) {
+                this.atualizarBotaoIniciar(jogadores.length);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar jogadores:', error);
+            this.mostrarJogadores([]); // Mostrar lista vazia em caso de erro
+        }
+
+        this.carregando = false;
+
+    }
+
+    atualizarBotaoIniciar(totalJogadores) {
+        const btnIniciar = document.getElementById('btnIniciar');
+        if (!btnIniciar) return;
+
+        btnIniciar.disabled = totalJogadores < 2;
+        
+        if (totalJogadores < 2) {
+            btnIniciar.title = `Mínimo 2 jogadores (${totalJogadores}/2)`;
+        } else {
+            btnIniciar.title = 'Clique para iniciar o jogo';
+        }
+    }
+
+    atualizarContador(total) {
+        const contador = document.getElementById('contadorJogadores');
+        if (contador) {
+            contador.textContent = total;
+        }
+    }
+
+    mostrarJogadores(jogadores) {
+        const container = document.getElementById('listaJogadores');
+    
+        if (!container) {
+            console.error('❌ Elemento listaJogadores não encontrado!');
+            return;
+        }
+
+        // 🚨 CORREÇÃO: Verificar se jogadores é válido
+        if (!jogadores || !Array.isArray(jogadores) || jogadores.length === 0) {
+            container.innerHTML = '<div style="color: var(--cor-branco2); text-align: center; padding: 20px;">Nenhum jogador conectado</div>';
+            return;
+        }
+
+        console.log('🎨 Renderizando', jogadores.length, 'jogadores:', jogadores);
+        
+        let html = '';
+        jogadores.forEach(jogador => {
+            // 🚨 CORREÇÃO: Verificar se jogador tem as propriedades necessárias
+            if (!jogador || !jogador.nome) {
+                console.warn('Jogador inválido:', jogador);
+                return;
+            }
+            
+            const ehEu = (jogador.id_jogador == window.idJogador);
+            const ehHost = (jogador.is_host == 1);
+            const possoRemover = (window.ehHost && !ehEu && !ehHost);
+
+            html += `
+                <div class="jogador-item">
+                    <div class="jogador-nome">
+                        ${ehHost ? '👑' : '👤'} ${this.escapeHtml(jogador.nome)}
+                        ${ehEu ? '<span class="badge-vc">Você</span>' : ''}
+                        ${ehHost ? '<span class="badge-host">Host</span>' : ''}
+                    </div>
+                    ${possoRemover ? `
+                        <button class="btn-remover" onclick="lobby.removerJogador(${jogador.id_jogador}, '${this.escapeHtml(jogador.nome)}')">
+                            <i class="bi bi-person-x"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    configurarBotoes() {
+        console.log('🔧 Configurando botões - Host:', window.ehHost);
+        
+        if (window.ehHost) {
+            const btnIniciar = document.getElementById('btnIniciar');
+            const btnFechar = document.getElementById('btnFechar');
+            
+            if (btnIniciar) btnIniciar.onclick = () => this.iniciarJogo();
+            if (btnFechar) btnFechar.onclick = () => this.fecharSala();
+        } else {
+            const btnSair = document.getElementById('btnSair');
+            if (btnSair) btnSair.onclick = () => this.sairSala();
+        }
+    }
+
+    async atualizarLobby() {
+        await this.carregarJogadores();
+        
+        // Se não for host, verificar se jogo começou
+        if (!window.ehHost) {
+            await this.verificarStatusJogo();
+        }
+    }
+
+    async verificarStatusJogo() {
+        try {
+            const status = await this.ajax('verificar_status');
+            if (status.status === 'iniciada') {
+                window.location.href = `game.php?codigo=${window.codigoSala}`;
+            }
+        } catch (error) {
+            console.error('Erro ao verificar status:', error);
+        }
+    }
+
+    async iniciarJogo() {
+        if (this.jogadores.length < 2) {
+            this.mostrarErro('Mínimo de 2 jogadores para iniciar');
+            return;
+        }
+
+        const { value: confirmar } = await Swal.fire({
+            title: 'Iniciar Jogo?',
+            html: `
+                <div style="text-align: left; color: var(--cor-branco);">
+                    <p><strong>${this.jogadores.length} jogadores</strong> conectados</p>
+                    <p>O jogo vai começar para todos os jogadores.</p>
+                </div>
+            `,
+            icon: 'question',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-azul)',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, iniciar!',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--cor-amarela2)',
+            cancelButtonColor: 'var(--cor-rosa)'
+        });
+
+        if (confirmar) {
+            try {
+                const resultado = await this.ajax('iniciar_jogo');
+                if (resultado.status === 'ok') {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Jogo Iniciado!',
+                        text: 'Redirecionando...',
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)',
+                        iconColor: 'var(--cor-azul)',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    window.location.href = `game.php?codigo=${window.codigoSala}`;
+                } else {
+                    this.mostrarErro(resultado.mensagem);
+                }
+            } catch (error) {
+                this.mostrarErro('Erro ao iniciar jogo');
+            }
+        }
+    }
+
+    async sairSala() {
+        const { value: confirmar } = await Swal.fire({
+            title: 'Sair da Sala?',
+            text: 'Você poderá entrar novamente se tiver o código.',
+            icon: 'warning',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-azul)',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, sair!',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--cor-azul2)',
+            cancelButtonColor: 'var(--cor-rosa)'
+        });
+
+        if (confirmar) {
+            try {
+                const resultado = await this.ajax('sair_sala');
+                if (resultado.status === 'ok') {
+                    window.location.href = '../index.php';
+                } else {
+                    this.mostrarErro(resultado.mensagem);
+                }
+            } catch (error) {
+                this.mostrarErro('Erro ao sair da sala');
+            }
+        }
+    }
+
+    async fecharSala() {
+        const { value: confirmar } = await Swal.fire({
+            title: 'Fechar Sala?',
+            html: `
+                <div style="text-align: left; color: var(--cor-branco);">
+                    <p><strong>Todos os jogadores serão desconectados</strong></p>
+                    <p>A sala será excluída permanentemente</p>
+                </div>
+            `,
+            icon: 'warning',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-rosa)',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, fechar!',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--cor-rosa)',
+            cancelButtonColor: 'var(--cor-azul)'
+        });
+
+        if (confirmar) {
+            try {
+                const resultado = await this.ajax('fechar_sala');
+                if (resultado.status === 'ok') {
+                    window.location.href = '../index.php';
+                } else {
+                    this.mostrarErro(resultado.mensagem);
+                }
+            } catch (error) {
+                this.mostrarErro('Erro ao fechar sala');
+            }
+        }
+    }
+
+    async removerJogador(id, nome) {
+        const { value: confirmar } = await Swal.fire({
+            title: 'Remover Jogador?',
+            html: `
+                <div style="text-align: left; color: var(--cor-branco);">
+                    <p>Remover <strong>${nome}</strong> da sala?</p>
+                    <p>O jogador será desconectado imediatamente.</p>
+                </div>
+            `,
+            icon: 'question',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-rosa)',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, remover!',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--cor-rosa)',
+            cancelButtonColor: 'var(--cor-azul)'
+        });
+
+        if (confirmar) {
+            try {
+                const resultado = await this.ajax('remover_jogador', {id_jogador: id});
+                if (resultado.status === 'ok') {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Jogador Removido!',
+                        text: `${nome} foi removido da sala`,
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)',
+                        iconColor: 'var(--cor-azul)',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    this.carregarJogadores();
+                } else {
+                    this.mostrarErro(resultado.mensagem);
+                }
+            } catch (error) {
+                this.mostrarErro('Erro ao remover jogador');
+            }
+        }
+    }
+
+    async ajax(acao, dadosExtras = {}) {
+        // 🚨 CORREÇÃO: Verificar se codigoSala está definido
+        if (!window.codigoSala || window.codigoSala === 'undefined') {
+            console.error('❌ ERRO: codigoSala não definido');
+            this.mostrarErro('Erro: Código da sala não encontrado. Recarregue a página.');
+            return {status: 'erro', mensagem: 'Código da sala não definido'};
+        }
+
+        const formData = new FormData();
+        formData.append('acao', acao);
+        formData.append('codigo', window.codigoSala);
+        
+        for (let key in dadosExtras) {
+            formData.append(key, dadosExtras[key]);
+        }
+
+        console.log(`📡 Fazendo requisição: ${acao}`, {codigo: window.codigoSala, acao: acao});
+        
+        try {
+            const response = await fetch('../utils/lobby_actions.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const resultado = await response.json();
+            console.log(`📦 Resposta ${acao}:`, resultado);
+            
+            return resultado;
+        } catch (error) {
+            console.error(`❌ Erro na requisição ${acao}:`, error);
+            return {status: 'erro', mensagem: 'Erro de conexão'};
+        }
+    }
+}
+
+// Inicializar lobby quando a página carregar
+document.addEventListener('DOMContentLoaded', () => {
+    window.lobby = new Lobby();
+});
+
+- public/style/index.css:
+@import url(style.css);
+
+.body-index{
+    background-color: var(--cor-fundo);
+    color: var(--cor-branco);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.btn-custom-index{
+    width: 220px;
+    font-size: 1.1rem;
+    margin: 10px 0;
+}
+
+.btn-criar-index{
+    color: var(--cor-branco);
+    background-color: var(--cor-azul2);
+}
+
+.btn-criar-index:hover{
+    background-color: var(--cor-azul);
+}
+
+.btn-entrar-index{
+    color: var(--cor-branco);
+    background-color: var(--cor-rosa2);
+}
+
+.btn-entrar-index:hover{
+    background-color: var(--cor-rosa);
+}
+
+.btn-criar{
+    background-color: var(--cor-azul2);
+    color: var(--cor-branco);
+    border: none;
+}
+
+.btn-criar:hover{
+    background-color: var(--cor-azul);
+}
+
+.btn-entrar{
+    background-color: var(--cor-rosa2);
+    color: #fff;
+    border: none;
+}
+
+.btn-entrar:hover{
+    background-color: var(--cor-rosa);
+}
+
+.modal-content{
+    background-color: var(--cor-fundo2);
+    color: var(--cor-branco);
+    border-radius: 12px;
+}
+
+.titulo-index{
+    font-weight: bold;
+    margin-bottom: 0.3em;
+}
+.subtitulo-index{
+    font-size: 1.1rem;
+    color: #ccc;
+    margin-bottom: 2em;
+}
+
+.logo-index {
+    max-width: 300px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 1.5rem;
+}
+
+.form-control-dark,
+.form-select-dark {
+    background-color: #2a2a2a !important;
+    border-color: #444 !important;
+    color: var(--cor-branco) !important;
+}
+
+.form-control-dark:focus,
+.form-select-dark:focus {
+    background-color: #333 !important;
+    border-color: var(--cor-azul) !important;
+    color: var(--cor-branco) !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+.form-control-dark::placeholder {
+    color: #999 !important;
+}
+
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.form-control-dark[type="number"]::-webkit-outer-spin-button,
+.form-control-dark[type="number"]::-webkit-inner-spin-button {
+    filter: invert(0.8);
+}
+
+.swal2-popup {
+    border: 2px solid var(--cor-azul) !important;
+    border-radius: 12px !important;
+}
+
+.swal2-title {
+    color: var(--cor-branco) !important;
+}
+
+.swal2-html-container {
+    color: var(--cor-branco2) !important;
+}
+
+.sweetalert-dark {
+    background: var(--cor-fundo2) !important;
+}
+
+- public/style/lobby.css:
+@import url(style.css);
+
+.lobby-body {
+    background: var(--cor-fundo);
+    color: var(--cor-branco);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.lobby-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.lobby-codigo {
+    color: var(--cor-azul);
+    font-size: 2.5em;
+    font-weight: 700;
+    margin: 0;
+}
+
+.lobby-info {
+    color: var(--cor-branco2);
+    font-size: 1.1em;
+    font-weight: 400;
+}
+
+.jogadores-section {
+    background: var(--cor-fundo2);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 2px solid var(--cor-azul);
+}
+
+.jogadores-titulo {
+    color: var(--cor-branco);
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.contador-jogadores {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.lista-jogadores {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.jogador-item {
+    background: var(--cor-fundo);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--cor-azul2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.jogador-nome {
+    color: var(--cor-branco);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.badge-vc {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.7em;
+    font-weight: 500;
+}
+
+.badge-host {
+    background: var(--cor-amarela2);
+    color: var(--cor-fundo);
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.7em;
+    font-weight: 500;
+}
+
+.btn-remover {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+    border: none;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 0.8em;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-remover:hover {
+    background: var(--cor-rosa2);
+}
+
+.botoes-lobby {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-lobby {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.2s;
+}
+
+.btn-lobby:hover {
+    transform: translateY(-2px);
+}
+
+.btn-iniciar {
+    background: var(--cor-amarela);
+    color: var(--cor-fundo);
+}
+
+.btn-iniciar:disabled {
+    background: var(--cor-branco2);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-fechar {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+}
+
+.btn-sair {
+    background: var(--cor-azul);
+    color: var(--cor-fundo);
+}
+
+- public/style/style.css:
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+:root {
+    --cor-branco: #fdfffe;
+    --cor-branco2: #c9d0d1;
+    --cor-rosa: #ff66bc;
+    --cor-rosa2: #e558cb;
+    --cor-amarela: #fff492;
+    --cor-amarela2: #fdc83a;
+    --cor-azul: #72d9eb;
+    --cor-azul2: #33a4e6;
+
+    --cor-fundo: #121212;
+    --cor-fundo2: #1f1e1e;
+}
+
+*{
+    font-family: 'Poppins', sans-serif;;
+}
+
+- utils/lobby_actions.php:
+<?php
+session_start();
+header("Content-Type: application/json");
+include "../db/conexao.php";
+
+$acao = $_POST['acao'] ?? '';
+$codigo = $_POST['codigo'] ?? '';
+
+if (empty($codigo)) {
+    echo json_encode(["status" => "erro", "mensagem" => "Código da sala não informado"]);
+    exit;
+}
+
+// Buscar sala
+$sql_sala = "SELECT id_sala, status FROM salas WHERE codigo_sala = ?";
+$stmt_sala = $conn->prepare($sql_sala);
+$stmt_sala->bind_param("s", $codigo);
+$stmt_sala->execute();
+$result_sala = $stmt_sala->get_result();
+
+if ($result_sala->num_rows === 0) {
+    echo json_encode(["status" => "erro", "mensagem" => "Sala não encontrada"]);
+    exit;
+}
+
+$sala = $result_sala->fetch_assoc();
+$id_sala = $sala['id_sala'];
+
+// Verificar se o jogador atual é host
+$sql_host = "SELECT id_jogador FROM jogadores WHERE id_sala = ? AND is_host = 1";
+$stmt_host = $conn->prepare($sql_host);
+$stmt_host->bind_param("i", $id_sala);
+$stmt_host->execute();
+$host = $stmt_host->get_result()->fetch_assoc();
+$eh_host_atual = ($host && $_SESSION['id_jogador'] == $host['id_jogador']);
+
+switch ($acao) {
+    case 'listar_jogadores':
+        // 🚨 CORREÇÃO: Verificar se a sala existe primeiro
+        $sql_sala = "SELECT id_sala FROM salas WHERE codigo_sala = ?";
+        $stmt_sala = $conn->prepare($sql_sala);
+        $stmt_sala->bind_param("s", $codigo);
+        $stmt_sala->execute();
+        $result_sala = $stmt_sala->get_result();
+        
+        if ($result_sala->num_rows === 0) {
+            echo json_encode(["status" => "erro", "mensagem" => "Sala não encontrada"]);
+            break;
+        }
+        
+        $sala = $result_sala->fetch_assoc();
+        $id_sala = $sala['id_sala'];
+        
+        // Agora buscar jogadores
+        $sql = "SELECT id_jogador, nome, is_host FROM jogadores WHERE id_sala = ? ORDER BY is_host DESC, id_jogador ASC";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $id_sala);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $jogadores = [];
+        while ($row = $result->fetch_assoc()) {
+            $jogadores[] = $row;
+        }
+        
+        // 🚨 CORREÇÃO: Sempre retornar array, nunca objeto de erro
+        echo json_encode($jogadores);
+        break;
+
+    case 'iniciar_jogo':
+        if (!$eh_host_atual) {
+            echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode iniciar o jogo"]);
+            exit;
+        }
+
+        // Verificar se tem pelo menos 2 jogadores
+        $sql_count = "SELECT COUNT(*) as total FROM jogadores WHERE id_sala = ?";
+        $stmt_count = $conn->prepare($sql_count);
+        $stmt_count->bind_param("i", $id_sala);
+        $stmt_count->execute();
+        $total = $stmt_count->get_result()->fetch_assoc()['total'];
+        
+        if ($total < 2) {
+            echo json_encode(["status" => "erro", "mensagem" => "Mínimo de 2 jogadores para iniciar"]);
+            exit;
+        }
+
+        // Atualizar status da sala
+        $sql_update = "UPDATE salas SET status = 'iniciada' WHERE id_sala = ?";
+        $stmt_update = $conn->prepare($sql_update);
+        $stmt_update->bind_param("i", $id_sala);
+        
+        if ($stmt_update->execute()) {
+            echo json_encode(["status" => "ok"]);
+        } else {
+            echo json_encode(["status" => "erro", "mensagem" => "Erro ao iniciar jogo"]);
+        }
+        break;
+
+    case 'sair_sala':
+        // Jogador normal pode sair, host não pode sair (só fechar sala)
+        if ($eh_host_atual) {
+            echo json_encode(["status" => "erro", "mensagem" => "Host deve fechar a sala em vez de sair"]);
+            exit;
+        }
+
+        $sql_delete = "DELETE FROM jogadores WHERE id_jogador = ? AND id_sala = ?";
+        $stmt_delete = $conn->prepare($sql_delete);
+        $stmt_delete->bind_param("ii", $_SESSION['id_jogador'], $id_sala);
+        
+        if ($stmt_delete->execute()) {
+            session_destroy();
+            echo json_encode(["status" => "ok"]);
+        } else {
+            echo json_encode(["status" => "erro", "mensagem" => "Erro ao sair da sala"]);
+        }
+        break;
+
+    case 'fechar_sala':
+        if (!$eh_host_atual) {
+            echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode fechar a sala"]);
+            exit;
+        }
+
+        // Deletar sala (cascade vai deletar jogadores e respostas)
+        $sql_delete = "DELETE FROM salas WHERE id_sala = ?";
+        $stmt_delete = $conn->prepare($sql_delete);
+        $stmt_delete->bind_param("i", $id_sala);
+
+        if ($stmt_delete->execute()) {
+            session_destroy();
+            echo json_encode(["status" => "ok"]);
+        } else {
+            echo json_encode(["status" => "erro", "mensagem" => "Erro ao fechar sala"]);
+        }
+        break;
+
+    case 'remover_jogador':
+        if (!$eh_host_atual) {
+            echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode remover jogadores"]);
+            exit;
+        }
+
+        $id_remover = $_POST['id_jogador'] ?? 0;
+        
+        // Não pode remover a si mesmo
+        if ($id_remover == $_SESSION['id_jogador']) {
+            echo json_encode(["status" => "erro", "mensagem" => "Não pode se remover"]);
+            exit;
+        }
+
+        // Não pode remover outro host
+        $sql_check_host = "SELECT is_host FROM jogadores WHERE id_jogador = ?";
+        $stmt_check = $conn->prepare($sql_check_host);
+        $stmt_check->bind_param("i", $id_remover);
+        $stmt_check->execute();
+        $jogador_remover = $stmt_check->get_result()->fetch_assoc();
+        
+        if ($jogador_remover && $jogador_remover['is_host'] == 1) {
+            echo json_encode(["status" => "erro", "mensagem" => "Não pode remover outro host"]);
+            exit;
+        }
+
+        $sql_remove = "DELETE FROM jogadores WHERE id_jogador = ? AND id_sala = ?";
+        $stmt_remove = $conn->prepare($sql_remove);
+        $stmt_remove->bind_param("ii", $id_remover, $id_sala);
+        
+        if ($stmt_remove->execute()) {
+            echo json_encode(["status" => "ok"]);
+        } else {
+            echo json_encode(["status" => "erro", "mensagem" => "Erro ao remover jogador"]);
+        }
+        break;
+
+    default:
+        echo json_encode(["status" => "erro", "mensagem" => "Ação desconhecida"]);
+}
+?>
+
+- utils/obter_pergunta.php:
+<?php
+header("Content-Type: application/json");
+include "../db/conexao.php";
+
+$codigo = $_GET['codigo'] ?? '';
+$rodada = $_GET['rodada'] ?? 1;
+
+if (empty($codigo)) {
+    echo json_encode(["status" => "erro", "mensagem" => "Código não informado"]);
+    exit;
+}
+
+// Buscar sala e categoria
+$sql_sala = "SELECT s.id_categoria, s.rodadas, c.nome_categoria 
+             FROM salas s 
+             JOIN categorias c ON s.id_categoria = c.id_categoria 
+             WHERE s.codigo_sala = ?";
+$stmt_sala = $conn->prepare($sql_sala);
+$stmt_sala->bind_param("s", $codigo);
+$stmt_sala->execute();
+$result_sala = $stmt_sala->get_result();
+
+if ($result_sala->num_rows === 0) {
+    echo json_encode(["status" => "erro", "mensagem" => "Sala não encontrada"]);
+    exit;
+}
+
+$sala = $result_sala->fetch_assoc();
+$id_categoria = $sala['id_categoria'];
+$total_rodadas = $sala['rodadas'];
+
+// Verificar se acabaram as rodadas
+if ($rodada > $total_rodadas) {
+    echo json_encode(["status" => "fim"]);
+    exit;
+}
+
+// 🚨 CORREÇÃO: Buscar pergunta aleatória DIRETO do banco
+$sql_pergunta = "SELECT * FROM perguntas WHERE id_categoria = ? ORDER BY RAND() LIMIT 1";
+$stmt_pergunta = $conn->prepare($sql_pergunta);
+$stmt_pergunta->bind_param("i", $id_categoria);
+$stmt_pergunta->execute();
+$result_pergunta = $stmt_pergunta->get_result();
+
+if ($result_pergunta->num_rows === 0) {
+    echo json_encode(["status" => "erro", "mensagem" => "Nenhuma pergunta encontrada para esta categoria"]);
+    exit;
+}
+
+$pergunta = $result_pergunta->fetch_assoc();
+
+echo json_encode([
+    "status" => "ok",
+    "pergunta" => $pergunta,
+    "rodada_atual" => $rodada,
+    "total_rodadas" => $total_rodadas
+]);
+?>
+
+- utils/registrar_resposta.php:
+<?php
+session_start();
+header("Content-Type: application/json");
+include "../db/conexao.php";
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(["status" => "erro", "mensagem" => "Método não permitido"]);
+    exit;
+}
+
+$id_jogador = $_POST['id_jogador'] ?? 0;
+$id_pergunta = $_POST['id_pergunta'] ?? 0;
+$resposta_escolhida = $_POST['resposta_escolhida'] ?? 0;
+$correta = $_POST['correta'] ?? 0;
+$tempo_resposta = $_POST['tempo_resposta'] ?? 0;
+
+if (!$id_jogador || !$id_pergunta) {
+    echo json_encode(["status" => "erro", "mensagem" => "Dados incompletos"]);
+    exit;
+}
+
+// Calcular pontos (quanto mais rápido, mais pontos)
+$pontos = 0;
+if ($correta) {
+    $pontos = max(100, 1000 - ($tempo_resposta * 10));
+}
+
+// Registrar resposta
+$sql_resposta = "INSERT INTO respostas (id_jogador, id_pergunta, resposta_escolhida, correta, tempo_resposta) 
+                 VALUES (?, ?, ?, ?, ?)";
+$stmt_resposta = $conn->prepare($sql_resposta);
+$stmt_resposta->bind_param("iiisi", $id_jogador, $id_pergunta, $resposta_escolhida, $correta, $tempo_resposta);
+
+if ($stmt_resposta->execute()) {
+    // Atualizar pontos do jogador
+    if ($pontos > 0) {
+        $sql_pontos = "UPDATE jogadores SET pontos = pontos + ? WHERE id_jogador = ?";
+        $stmt_pontos = $conn->prepare($sql_pontos);
+        $stmt_pontos->bind_param("ii", $pontos, $id_jogador);
+        $stmt_pontos->execute();
+    }
+    
+    echo json_encode(["status" => "ok", "pontos" => $pontos]);
+} else {
+    echo json_encode(["status" => "erro", "mensagem" => "Erro ao registrar resposta"]);
+}
+?>
+
+- utils/finalizar_jogo.php:
+<?php
+session_start();
+header("Content-Type: application/json");
+include "../db/conexao.php";
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(["status" => "erro", "mensagem" => "Método não permitido"]);
+    exit;
+}
+
+$codigo = $_POST['codigo'] ?? '';
+
+if (empty($codigo)) {
+    echo json_encode(["status" => "erro", "mensagem" => "Código não informado"]);
+    exit;
+}
+
+// Atualizar status da sala para encerrada
+$sql_update = "UPDATE salas SET status = 'encerrada' WHERE codigo_sala = ?";
+$stmt_update = $conn->prepare($sql_update);
+$stmt_update->bind_param("s", $codigo);
+
+if ($stmt_update->execute()) {
+    echo json_encode(["status" => "ok"]);
+} else {
+    echo json_encode(["status" => "erro", "mensagem" => "Erro ao finalizar jogo"]);
+}
+?>
+
+- utils/categorias.php:
+<?php
+include_once "../db/conexao.php";
+
+if (isset($_GET['action']) && $_GET['action'] === 'getCategorias') {
+    $result = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria");
+    $categorias = [];
+    while ($row = $result->fetch_assoc()) {
+        $categorias[] = $row;
+    }
+    echo json_encode($categorias);
+    exit;
+}
+
+function gerarCodigoSala($conn) {
+    do {
+        $codigo = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+        $check = $conn->query("SELECT * FROM salas WHERE codigo_sala = '$codigo'");
+    } while ($check->num_rows > 0);
+    return $codigo;
+}
+?>
+
+- view/limpar_salas_antigas.php:
+<?php
+include "../db/conexao.php";
+
+try {
+    $conn->query("ALTER TABLE salas ADD COLUMN IF NOT EXISTS data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+} catch (Exception $e) {
+}
+
+$tempo_maximo_inatividade = 24;
+
+$data_limite = date('Y-m-d H:i:s', strtotime("-$tempo_maximo_inatividade hours"));
+
+echo "Limpando salas criadas antes de: $data_limite\n";
+
+$sql_salas_antigas = "SELECT id_sala FROM salas WHERE data_criacao < ?";
+$stmt_salas = $conn->prepare($sql_salas_antigas);
+$stmt_salas->bind_param("s", $data_limite);
+$stmt_salas->execute();
+$result_salas = $stmt_salas->get_result();
+
+$salas_excluidas = 0;
+
+while ($sala = $result_salas->fetch_assoc()) {
+    $id_sala = $sala['id_sala'];
+    
+    echo "Excluindo sala ID: $id_sala\n";
+    
+    $sql_jogadores = "SELECT id_jogador FROM jogadores WHERE id_sala = ?";
+    $stmt_jogadores = $conn->prepare($sql_jogadores);
+    $stmt_jogadores->bind_param("i", $id_sala);
+    $stmt_jogadores->execute();
+    $result_jogadores = $stmt_jogadores->get_result();
+    
+    $ids_jogadores = [];
+    while ($jogador = $result_jogadores->fetch_assoc()) {
+        $ids_jogadores[] = $jogador['id_jogador'];
+    }
+    
+    if (!empty($ids_jogadores)) {
+        $placeholders = str_repeat('?,', count($ids_jogadores) - 1) . '?';
+        $sql_respostas = "DELETE FROM respostas WHERE id_jogador IN ($placeholders)";
+        $stmt_respostas = $conn->prepare($sql_respostas);
+        $stmt_respostas->bind_param(str_repeat('i', count($ids_jogadores)), ...$ids_jogadores);
+        $stmt_respostas->execute();
+    }
+    
+    $sql_delete_sala = "DELETE FROM salas WHERE id_sala = ?";
+    $stmt_sala = $conn->prepare($sql_delete_sala);
+    $stmt_sala->bind_param("i", $id_sala);
+    $stmt_sala->execute();
+    
+    $salas_excluidas++;
+}
+
+echo "Total de salas excluídas: $salas_excluidas\n";
+?>
+
+- view/criar_sala.php:
+<?php
+header("Content-Type: application/json");
+include "../db/conexao.php";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $nome = trim($_POST["nome"] ?? "");
+    $categoria = intval($_POST["categoria"] ?? 0);
+    $rodadas = intval($_POST["rodadas"] ?? 0);
+    $tempo_resposta = intval($_POST["tempo_resposta"] ?? 0);
+
+    if (empty($nome) || !$categoria || !$rodadas || !$tempo_resposta) {
+        echo json_encode(["status" => "erro", "mensagem" => "Campos obrigatórios não preenchidos."]);
+        exit;
+    }
+
+    do {
+        $codigo = strtoupper(substr(str_shuffle("ABCDEFGHJKLMNPQRSTUVWXYZ23456789"), 0, 6));
+        $check = $conn->query("SELECT id_sala FROM salas WHERE codigo_sala = '$codigo'");
+    } while ($check && $check->num_rows > 0);
+
+    $sql_sala = "INSERT INTO salas (codigo_sala, id_categoria, rodadas, tempo_resposta)
+                 VALUES ('$codigo', $categoria, $rodadas, $tempo_resposta)";
+
+    if ($conn->query($sql_sala)) {
+        $id_sala = $conn->insert_id;
+
+        $sql_jogador = "INSERT INTO jogadores (nome, id_sala, is_host)
+                        VALUES ('$nome', $id_sala, 1)";
+        if ($conn->query($sql_jogador)) {
+            $id_jogador = $conn->insert_id;
+            
+            session_start();
+            $_SESSION['id_jogador'] = $id_jogador;
+            $_SESSION['nome_jogador'] = $nome;
+            $_SESSION['id_sala'] = $id_sala;
+            $_SESSION['eh_host'] = true;
+
+            echo json_encode([
+                "status" => "ok",
+                "codigo" => $codigo
+            ]);
+        } else {
+            echo json_encode([
+                "status" => "erro", 
+                "mensagem" => "Erro ao criar jogador: " . $conn->error
+            ]);
+        }
+    } else {
+        echo json_encode([
+            "status" => "erro",
+            "mensagem" => "Erro ao criar sala: " . $conn->error
+        ]);
+    }
+}
+?>
+
+- view/entrar_sala.php:
+<?php
+session_start();
+header("Content-Type: application/json");
+include "../db/conexao.php";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $nome = trim($_POST["nome"] ?? "");
+    $codigo_sala = strtoupper(trim($_POST["codigo_sala"] ?? ""));
+
+    if (empty($nome) || empty($codigo_sala)) {
+        echo json_encode(["status" => "erro", "mensagem" => "Preencha todos os campos."]);
+        exit;
+    }
+
+    $sql = "SELECT id_sala FROM salas WHERE codigo_sala = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $codigo_sala);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows === 0) {
+        echo json_encode(["status" => "erro", "mensagem" => "Sala não encontrada. Verifique o código."]);
+        exit;
+    }
+
+    $sala = $result->fetch_assoc();
+    $id_sala = $sala['id_sala'];
+
+    $sql_status = "SELECT status FROM salas WHERE id_sala = ?";
+    $stmt_status = $conn->prepare($sql_status);
+    $stmt_status->bind_param("i", $id_sala);
+    $stmt_status->execute();
+    $result_status = $stmt_status->get_result();
+    $status_sala = $result_status->fetch_assoc();
+
+    if ($status_sala['status'] !== 'aberta') {
+        echo json_encode(["status" => "erro", "mensagem" => "Esta sala não está mais aceitando jogadores."]);
+        exit;
+    }
+
+    $sql_jogador = "INSERT INTO jogadores (nome, id_sala, is_host) VALUES (?, ?, 0)";
+    $stmt_jogador = $conn->prepare($sql_jogador);
+    $stmt_jogador->bind_param("si", $nome, $id_sala);
+
+    if ($stmt_jogador->execute()) {
+        $_SESSION['id_jogador'] = $stmt_jogador->insert_id;
+        $_SESSION['nome_jogador'] = $nome;
+        $_SESSION['id_sala'] = $id_sala;
+        $_SESSION['eh_host'] = false;
+
+        echo json_encode([
+            "status" => "ok",
+            "codigo" => $codigo_sala
+        ]);
+    } else {
+        echo json_encode([
+            "status" => "erro",
+            "mensagem" => "Erro ao entrar na sala: " . $conn->error
+        ]);
+    }
+}
+?>
+
+- view/game.php:
+<?php
+session_start();
+include "../db/conexao.php";
+
+$codigo = $_GET['codigo'] ?? null;
+
+if (!$codigo) {
+    die("<h2>Sala não encontrada.</h2>");
+}
+
+if (!isset($_SESSION['id_jogador'])) {
+    die("<h2>Acesso negado.</h2>");
+}
+
+$sql_sala = "SELECT s.*, c.nome_categoria FROM salas s 
+             JOIN categorias c ON s.id_categoria = c.id_categoria 
+             WHERE s.codigo_sala = ?";
+$stmt = $conn->prepare($sql_sala);
+$stmt->bind_param("s", $codigo);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+    die("<h2>Sala não encontrada.</h2>");
+}
+
+$sala = $result->fetch_assoc();
+
+if ($sala['status'] !== 'iniciada') {
+    header("Location: lobby.php?codigo=" . $codigo);
+    exit;
+}
+?>
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo - BarelyKnow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../public/style/index.css">
+    <style>
+        .pergunta-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            color: white;
+        }
+        .alternativa {
+            background: var(--cor-fundo2);
+            border: 2px solid #444;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+        .alternativa:hover {
+            border-color: var(--cor-azul);
+            transform: translateY(-2px);
+        }
+        .alternativa.selecionada {
+            border-color: var(--cor-azul);
+            background: var(--cor-azul2);
+        }
+        .timer-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--cor-fundo2);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 3px solid var(--cor-azul);
+        }
+        .rodada-info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--cor-fundo2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body class="body-index">
+    <div class="timer-container">
+        <span id="timer">--</span>
+    </div>
+    
+    <div class="rodada-info">
+        Rodada: <span id="numeroRodada">1</span>/<span id="totalRodadas"><?= $sala['rodadas'] ?></span>
+    </div>
+
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="pergunta-container text-center">
+                    <h2 id="perguntaTexto">Carregando pergunta...</h2>
+                </div>
+                
+                <div class="alternativas-container">
+                    <div class="alternativa" data-alternativa="1">
+                        <span id="textoAlternativa1">Carregando...</span>
+                    </div>
+                    <div class="alternativa" data-alternativa="2">
+                        <span id="textoAlternativa2">Carregando...</span>
+                    </div>
+                    <div class="alternativa" data-alternativa="3">
+                        <span id="textoAlternativa3">Carregando...</span>
+                    </div>
+                    <div class="alternativa" data-alternativa="4">
+                        <span id="textoAlternativa4">Carregando...</span>
+                    </div>
+                </div>
+                
+                <div id="feedback" class="mt-3 text-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../public/js/game.js"></script>
+    
+    <script>
+        const codigoSala = "<?= $codigo ?>";
+        const tempoResposta = <?= $sala['tempo_resposta'] ?>;
+        const totalRodadas = <?= $sala['rodadas'] ?>;
+        const idJogador = <?= $_SESSION['id_jogador'] ?>;
+    </script>
+</body>
+</html>
+
+- view/lobby.php:
+<?php
+session_start();
+include "../db/conexao.php";
+
+$codigo = $_GET['codigo'] ?? header("Location: ../index.php");
+
+// DEBUG TEMPORÁRIO
+error_log("=== DEBUG LOBBY ===");
+error_log("Código da sala: " . $codigo);
+error_log("Session ID: " . ($_SESSION['id_jogador'] ?? 'NÃO SETADO'));
+error_log("===================");
+
+$sql = "SELECT s.*, c.nome_categoria, j.is_host 
+        FROM salas s 
+        JOIN categorias c ON s.id_categoria = c.id_categoria
+        JOIN jogadores j ON s.id_sala = j.id_sala AND j.id_jogador = ?
+        WHERE s.codigo_sala = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("is", $_SESSION['id_jogador'], $codigo);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+    error_log("ERRO: Acesso negado - sala não encontrada ou jogador não pertence à sala");
+    die("<h2>Acesso negado. Entre na sala novamente.</h2>");
+}
+
+$dados = $result->fetch_assoc();
+$ehHost = ($dados['is_host'] == 1);
+
+// DEBUG
+error_log("É host: " . ($ehHost ? 'SIM' : 'NÃO'));
+?>
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lobby - <?= $codigo ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../public/style/lobby.css">
+</head>
+<body class="lobby-body">
+    <div class="lobby-header">
+        <h1 class="lobby-codigo">Sala: <?= $codigo ?></h1>
+        <p class="lobby-info">
+            <?= $dados['nome_categoria'] ?> • 
+            <?= $dados['rodadas'] ?> rodadas • 
+            <?= $dados['tempo_resposta'] ?>s por pergunta
+        </p>
+        
+        <?php if ($ehHost): ?>
+            <p style="color: var(--cor-amarela);">
+                <i class="bi bi-star-fill"></i> Você é o Host
+            </p>
+        <?php else: ?>
+            <p style="color: var(--cor-azul);">
+                <i class="bi bi-person"></i> Aguardando host iniciar...
+            </p>
+        <?php endif; ?>
+    </div>
+
+    <div class="jogadores-section">
+        <div class="jogadores-titulo">
+            <i class="bi bi-people"></i> Jogadores
+            <span class="contador-jogadores" id="contadorJogadores">0</span>
+        </div>
+        <div id="listaJogadores" class="lista-jogadores">
+            <div style="color: var(--cor-branco2); text-align: center;">
+                Carregando jogadores...
+            </div>
+        </div>
+    </div>
+
+    <div class="botoes-lobby">
+        <?php if ($ehHost): ?>
+            <button id="btnIniciar" class="btn-lobby btn-iniciar" disabled>
+                <i class="bi bi-play-circle"></i> Iniciar Jogo
+            </button>
+            <button id="btnFechar" class="btn-lobby btn-fechar">
+                <i class="bi bi-x-circle"></i> Fechar Sala
+            </button>
+        <?php else: ?>
+            <button id="btnSair" class="btn-lobby btn-sair">
+                <i class="bi bi-box-arrow-left"></i> Sair
+            </button>
+        <?php endif; ?>
+    </div>
+
+    <script>
+        // 🚨 CORREÇÃO: Verificar se as variáveis PHP estão definidas
+        const codigoSala = "<?= isset($codigo) ? $codigo : '' ?>";
+        const ehHost = <?= isset($ehHost) && $ehHost ? 'true' : 'false'; ?>;
+        const idJogador = <?= isset($_SESSION['id_jogador']) ? $_SESSION['id_jogador'] : 'null'; ?>;
+        
+        console.log('🎯 Debug Lobby:');
+        console.log('Código:', codigoSala);
+        console.log('É Host:', ehHost);
+        console.log('ID Jogador:', idJogador);
+        
+        // 🚨 VERIFICAÇÃO EXTRA: Se codigoSala está vazio
+        if (!codigoSala) {
+            console.error('❌ ERRO: codigoSala está vazio!');
+            alert('Erro: Código da sala não encontrado. Volte para a página inicial.');
+            window.location.href = '../index.php';
+        }
+    </script>
+
+    <script src="../public/js/lobby.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>
+
+- view/ranking.php:
+<?php
+session_start();
+include "../db/conexao.php";
+
+$codigo = $_GET['codigo'] ?? null;
+
+if (!$codigo) {
+    die("<h2>Sala não encontrada.</h2>");
+}
+
+if (!isset($_SESSION['id_jogador'])) {
+    die("<h2>Acesso negado. Faça login novamente.</h2>");
+}
+
+// Buscar jogadores ordenados por pontos
+$sql_jogadores = "SELECT j.nome, j.pontos, j.is_host 
+                  FROM jogadores j 
+                  JOIN salas s ON j.id_sala = s.id_sala 
+                  WHERE s.codigo_sala = ? 
+                  ORDER BY j.pontos DESC 
+                  LIMIT 15";
+$stmt = $conn->prepare($sql_jogadores);
+$stmt->bind_param("s", $codigo);
+$stmt->execute();
+$result = $stmt->get_result();
+
+$jogadores = [];
+while ($row = $result->fetch_assoc()) {
+    $jogadores[] = $row;
+}
+
+// Verificar se é host
+$ehHost = false;
+$sql_host = "SELECT j.is_host FROM jogadores j 
+             JOIN salas s ON j.id_sala = s.id_sala 
+             WHERE s.codigo_sala = ? AND j.id_jogador = ?";
+$stmt_host = $conn->prepare($sql_host);
+$stmt_host->bind_param("si", $codigo, $_SESSION['id_jogador']);
+$stmt_host->execute();
+$result_host = $stmt_host->get_result();
+
+if ($result_host->num_rows > 0) {
+    $host_data = $result_host->fetch_assoc();
+    $ehHost = ($host_data['is_host'] == 1);
+}
+?>
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking - BarelyKnow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../public/style/lobby.css">
+    <style>
+        .ranking-item {
+            background: var(--cor-fundo);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--cor-azul2);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .posicao {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--cor-amarela);
+            min-width: 50px;
+        }
+        .primeiro { color: gold; }
+        .segundo { color: silver; }
+        .terceiro { color: #cd7f32; }
+    </style>
+</head>
+<body class="lobby-body">
+    <div class="lobby-header">
+        <h1 class="lobby-codigo">🏆 Ranking Final</h1>
+        <p class="lobby-info">Sala: <?= htmlspecialchars($codigo) ?></p>
+    </div>
+
+    <div class="jogadores-section">
+        <div class="jogadores-titulo">
+            <i class="bi bi-trophy"></i> Classificação
+        </div>
+        <div class="lista-jogadores">
+            <?php if (empty($jogadores)): ?>
+                <div style="color: var(--cor-branco2); text-align: center;">
+                    Nenhum jogador encontrado
+                </div>
+            <?php else: ?>
+                <?php foreach ($jogadores as $index => $jogador): ?>
+                    <div class="ranking-item">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div class="posicao 
+                                <?= $index == 0 ? 'primeiro' : '' ?>
+                                <?= $index == 1 ? 'segundo' : '' ?>
+                                <?= $index == 2 ? 'terceiro' : '' ?>">
+                                <?= $index + 1 ?>º
+                            </div>
+                            <div class="jogador-nome">
+                                <?= htmlspecialchars($jogador['nome']) ?>
+                                <?= $jogador['is_host'] ? ' 👑' : '' ?>
+                            </div>
+                        </div>
+                        <div style="color: var(--cor-amarela); font-weight: bold;">
+                            <?= $jogador['pontos'] ?> pts
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="botoes-lobby">
+        <?php if ($ehHost): ?>
+            <button class="btn-lobby btn-iniciar" onclick="reiniciarSala()">
+                <i class="bi bi-arrow-repeat"></i> Reiniciar Sala
+            </button>
+            <button class="btn-lobby btn-fechar" onclick="fecharSala()">
+                <i class="bi bi-x-circle"></i> Fechar Sala
+            </button>
+        <?php else: ?>
+            <button class="btn-lobby btn-sair" onclick="sairSala()">
+                <i class="bi bi-box-arrow-left"></i> Sair
+            </button>
+        <?php endif; ?>
+    </div>
+
+    <script>
+        function reiniciarSala() {
+            if (confirm('Reiniciar a sala? Todos voltarão ao lobby.')) {
+                // Implementar reinício se necessário
+                window.location.href = `lobby.php?codigo=<?= $codigo ?>`;
+            }
+        }
+        
+        function fecharSala() {
+            if (confirm('Fechar a sala? Todos serão desconectados.')) {
+                window.location.href = `../utils/lobby_actions.php?acao=fechar_sala&codigo=<?= $codigo ?>`;
+            }
+        }
+        
+        function sairSala() {
+            window.location.href = '../index.php';
+        }
+    </script>
+</body>
+</html>
+
+- index.php:
+<?php
+session_start();
+include "db/conexao.php";
+$categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC");
+?>
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarelyKnow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="public/style/index.css">
+    <link rel="icon" href="public/img/icon.png">
+</head>
+
+<body class="body-index">
+    <div class="text-center">
+        <img src="public/img/logo-principal.png" alt="Logo BarelyKnow" class="logo-index">
+        <h1 class="titulo-index">BarelyKnow</h1>
+        <p class="subtitulo-index">Hora de colocar os conhecimentos em prática... ou pelo menos a sorte!</p>
+
+        <button class="btn btn-lg btn-custom-index btn-criar" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('criar')">
+            <i class="bi bi-plus-circle"></i> Criar Sala
+        </button>
+        <br>
+        <button class="btn btn-lg btn-custom-index btn-entrar" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('entrar')">
+            <i class="bi bi-box-arrow-in-right"></i> Entrar em Sala
+        </button>
+    </div>
+
+    <div class="modal fade" id="modalSala" tabindex="-1" aria-labelledby="modalSalaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Criar Sala</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formSala">
+                        <div class="mb-3">
+                            <label class="form-label">Seu nome:</label>
+                            <input type="text" name="nome" class="form-control form-control-dark" required>
+                        </div>
+
+                        <div id="camposCriar">
+                            <div class="mb-3">
+                                <label class="form-label">Categoria:</label>
+                                <select name="categoria" class="form-select form-select-dark" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <?php while ($cat = $categorias->fetch_assoc()) { ?>
+                                        <option value="<?= $cat['id_categoria'] ?>">
+                                            <?= htmlspecialchars($cat['nome_categoria']) ?>
+                                        </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Rodadas:</label>
+                                <input type="number" name="rodadas" class="form-control form-control-dark" min="3" max="20" value="5" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Tempo por pergunta:</label>
+                                <select name="tempo_resposta" class="form-select form-select-dark" required>
+                                    <option value="10">10 segundos</option>
+                                    <option value="15" selected>15 segundos</option>
+                                    <option value="20">20 segundos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="camposEntrar" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Código da Sala:</label>
+                                <input type="text" name="codigo_sala" maxlength="6" class="form-control form-control-dark text-uppercase" required>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success" id="btnSubmit">Criar Sala</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script>
+        let modalTipo = 'criar';
+
+        function abrirModal(tipo) {
+            modalTipo = tipo;
+            const modalTitle = document.getElementById('modalTitle');
+            const camposCriar = document.getElementById('camposCriar');
+            const camposEntrar = document.getElementById('camposEntrar');
+            const btnSubmit = document.getElementById('btnSubmit');
+        
+            if (tipo === 'criar') {
+                modalTitle.textContent = 'Criar Sala';
+                camposCriar.style.display = 'block';
+                camposEntrar.style.display = 'none';
+                btnSubmit.textContent = 'Criar Sala';
+                btnSubmit.className = 'btn btn-success';
+
+                document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
+                    campo.disabled = false;
+                });
+                document.querySelectorAll('#camposEntrar input').forEach(campo => {
+                    campo.disabled = true;
+                    campo.required = false;
+                });
+
+            } else {
+                modalTitle.textContent = 'Entrar em Sala';
+                camposCriar.style.display = 'none';
+                camposEntrar.style.display = 'block';
+                btnSubmit.textContent = 'Entrar na Sala';
+                btnSubmit.className = 'btn btn-primary';
+
+                document.querySelectorAll('#camposEntrar input').forEach(campo => {
+                    campo.disabled = false;
+                    campo.required = true;
+                });
+                document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
+                    campo.disabled = true;
+                    campo.required = false;
+                });
+
+                setTimeout(() => {
+                    const inputCodigo = document.querySelector('input[name="codigo_sala"]');
+                    if (inputCodigo) {
+                        inputCodigo.focus();
+                    }
+                }, 100);
+            }
+        }
+
+        document.getElementById('modalSala').addEventListener('shown.bs.modal', function() {
+            setTimeout(() => {
+                if (modalTipo === 'entrar') {
+                    const inputCodigo = document.querySelector('input[name="codigo_sala"]');
+                    if (inputCodigo) {
+                        inputCodigo.focus();
+                    }
+                } else {
+                    const inputNome = document.querySelector('input[name="nome"]');
+                    if (inputNome) {
+                        inputNome.focus();
+                    }
+                }
+            }, 150);
+        });
+
+        document.getElementById('modalSala').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('formSala').reset();
+            document.querySelectorAll('input, select').forEach(campo => {
+                campo.disabled = false;
+                if (campo.name === 'codigo_sala') {
+                    campo.required = false;
+                }
+            });
+        });
+
+        document.getElementById('formSala').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            const url = modalTipo === 'criar' ? 'view/criar_sala.php' : 'view/entrar_sala.php';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+            
+                const data = await response.json();
+            
+                if (data.status === 'ok') {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalSala'));
+                    modal.hide();
+                
+                    Swal.fire({
+                        icon: 'success',
+                        iconColor: 'var(--cor-azul)',
+                        title: modalTipo === 'criar' ? 'Sala criada!' : 'Entrou na sala!',
+                        html: modalTipo === 'criar' ? `Sala criada com sucesso!<br><strong>Código: ${data.codigo}</strong>` : 'Redirecionando...',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)',
+                        customClass: {
+                            popup: 'sweetalert-dark'
+                        }
+                    }).then(() => {
+                        window.location.href = `view/lobby.php?codigo=${data.codigo}`;
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: data.mensagem,
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)',
+                        iconColor: 'var(--cor-rosa)'
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro de conexão',
+                    text: 'Não foi possível conectar ao servidor',
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)',
+                    iconColor: 'var(--cor-rosa)'
+                });
+            }
+        });     
+    </script>
+</body>
+</html>
