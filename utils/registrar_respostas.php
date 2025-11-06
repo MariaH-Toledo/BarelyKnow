@@ -19,20 +19,17 @@ if (!$id_jogador || !$id_pergunta) {
     exit;
 }
 
-// Calcular pontos (quanto mais rápido, mais pontos)
 $pontos = 0;
 if ($correta) {
     $pontos = max(100, 1000 - ($tempo_resposta * 10));
 }
 
-// Registrar resposta
 $sql_resposta = "INSERT INTO respostas (id_jogador, id_pergunta, resposta_escolhida, correta, tempo_resposta) 
                  VALUES (?, ?, ?, ?, ?)";
 $stmt_resposta = $conn->prepare($sql_resposta);
 $stmt_resposta->bind_param("iiisi", $id_jogador, $id_pergunta, $resposta_escolhida, $correta, $tempo_resposta);
 
 if ($stmt_resposta->execute()) {
-    // Atualizar pontos do jogador
     if ($pontos > 0) {
         $sql_pontos = "UPDATE jogadores SET pontos = pontos + ? WHERE id_jogador = ?";
         $stmt_pontos = $conn->prepare($sql_pontos);

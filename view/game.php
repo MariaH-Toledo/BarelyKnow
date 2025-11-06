@@ -14,22 +14,18 @@ if (!isset($_SESSION['id_jogador'])) {
 
 $sql_sala = "SELECT s.*, c.nome_categoria FROM salas s 
              JOIN categorias c ON s.id_categoria = c.id_categoria 
-             WHERE s.codigo_sala = ?";
+             WHERE s.codigo_sala = ? AND s.status = 'iniciada'";
 $stmt = $conn->prepare($sql_sala);
 $stmt->bind_param("s", $codigo);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    die("<h2>Sala não encontrada.</h2>");
-}
-
-$sala = $result->fetch_assoc();
-
-if ($sala['status'] !== 'iniciada') {
     header("Location: lobby.php?codigo=" . $codigo);
     exit;
 }
+
+$sala = $result->fetch_assoc();
 ?>
 
 <!DOCTYPE html>
@@ -41,57 +37,6 @@ if ($sala['status'] !== 'iniciada') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="../public/style/index.css">
-    <style>
-        .pergunta-container {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            color: white;
-        }
-        .alternativa {
-            background: var(--cor-fundo2);
-            border: 2px solid #444;
-            border-radius: 10px;
-            padding: 1rem;
-            margin: 0.5rem 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: white;
-        }
-        .alternativa:hover {
-            border-color: var(--cor-azul);
-            transform: translateY(-2px);
-        }
-        .alternativa.selecionada {
-            border-color: var(--cor-azul);
-            background: var(--cor-azul2);
-        }
-        .timer-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--cor-fundo2);
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            border: 3px solid var(--cor-azul);
-        }
-        .rodada-info {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: var(--cor-fundo2);
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-        }
-    </style>
 </head>
 <body class="body-index">
     <div class="timer-container">
@@ -123,13 +68,12 @@ if ($sala['status'] !== 'iniciada') {
                         <span id="textoAlternativa4">Carregando...</span>
                     </div>
                 </div>
-                
-                <div id="feedback" class="mt-3 text-center"></div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../public/js/game.js"></script>
     
     <script>
