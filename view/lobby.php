@@ -2,36 +2,84 @@
 session_start();
 include "../db/conexao.php";
 
-$codigo = $_GET['codigo'] ?? header("Location: ../index.php");
+$codigo = isset($_GET['codigo']) ? trim($_GET['codigo']) : '';
 
-// DEBUG TEMPORÁRIO
-error_log("=== DEBUG LOBBY ===");
-error_log("Código da sala: " . $codigo);
-error_log("Session ID: " . ($_SESSION['id_jogador'] ?? 'NÃO SETADO'));
-error_log("===================");
+if (empty($codigo)) {
+    die('
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro</title>
+            <style>
+                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
+                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
+                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="erro">❌ Error: Código da sala não encontrado</div>
+            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
+        </body>
+        </html>
+    ');
+}
 
-$sql = "SELECT s.*, c.nome_categoria, j.is_host 
-        FROM salas s 
-        JOIN categorias c ON s.id_categoria = c.id_categoria
-        JOIN jogadores j ON s.id_sala = j.id_sala AND j.id_jogador = ?
-        WHERE s.codigo_sala = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("is", $_SESSION['id_jogador'], $codigo);
+$stmt = $conn->prepare("SELECT s.*, c.nome_categoria FROM salas s JOIN categorias c ON s.id_categoria = c.id_categoria WHERE s.codigo_sala = ?");
+$stmt->bind_param("s", $codigo);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    error_log("ERRO: Acesso negado - sala não encontrada ou jogador não pertence à sala");
-    die("<h2>Acesso negado. Entre na sala novamente.</h2>");
+    die('
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro</title>
+            <style>
+                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
+                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
+                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="erro">❌ Sala não encontrada!</div>
+            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
+        </body>
+        </html>
+    ');
 }
 
-$dados = $result->fetch_assoc();
-$ehHost = ($dados['is_host'] == 1);
+$sala = $result->fetch_assoc();
 
-// DEBUG
-error_log("É host: " . ($ehHost ? 'SIM' : 'NÃO'));
+$id_jogador = $_SESSION['id_jogador'] ?? 0;
+$stmt_jogador = $conn->prepare("SELECT id_jogador, is_host FROM jogadores WHERE id_sala = ? AND id_jogador = ?");
+$stmt_jogador->bind_param("ii", $sala['id_sala'], $id_jogador);
+$stmt_jogador->execute();
+$result_jogador = $stmt_jogador->get_result();
+
+if ($result_jogador->num_rows === 0) {
+    die('
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro</title>
+            <style>
+                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
+                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
+                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="erro">❌ Você não está nesta sala!</div>
+            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
+        </body>
+        </html>
+    ');
+}
+
+$jogador = $result_jogador->fetch_assoc();
+$ehHost = ($jogador['is_host'] == 1);
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -40,23 +88,44 @@ error_log("É host: " . ($ehHost ? 'SIM' : 'NÃO'));
     <title>Lobby - <?= $codigo ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="../public/style/lobby.css">
+    <style>
+        body { background: #121212; color: white; font-family: Arial; margin: 0; padding: 20px; }
+        .lobby-header { text-align: center; margin-bottom: 30px; }
+        .lobby-codigo { color: #72d9eb; font-size: 2em; margin: 0; }
+        .lobby-info { color: #c9d0d1; font-size: 1.1em; }
+        .jogadores-section { background: #1f1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #33a4e6; }
+        .jogadores-titulo { color: white; font-size: 1.3em; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .contador-jogadores { background: #ff66bc; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
+        .lista-jogadores { display: flex; flex-direction: column; gap: 8px; }
+        .jogador-item { background: #121212; padding: 12px; border-radius: 8px; border: 1px solid #33a4e6; display: flex; justify-content: space-between; }
+        .jogador-nome { color: white; display: flex; align-items: center; gap: 8px; }
+        .badge-vc { background: #ff66bc; color: white; padding: 2px 6px; border-radius: 8px; font-size: 0.7em; }
+        .badge-host { background: #fdc83a; color: #121212; padding: 2px 6px; border-radius: 8px; font-size: 0.7em; }
+        .botoes-lobby { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn-lobby { padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; transition: all 0.2s; }
+        .btn-lobby:hover { transform: translateY(-2px); }
+        .btn-iniciar { background: #fff492; color: #121212; }
+        .btn-iniciar:disabled { background: #666; cursor: not-allowed; }
+        .btn-fechar { background: #ff66bc; color: white; }
+        .btn-sair { background: #33a4e6; color: white; }
+    </style>
 </head>
-<body class="lobby-body">
+<body>
     <div class="lobby-header">
         <h1 class="lobby-codigo">Sala: <?= $codigo ?></h1>
         <p class="lobby-info">
-            <?= $dados['nome_categoria'] ?> • 
-            <?= $dados['rodadas'] ?> rodadas • 
-            <?= $dados['tempo_resposta'] ?> segundos por pergunta
+            <?= $sala['nome_categoria'] ?> • 
+            <?= $sala['rodadas'] ?> rodadas • 
+            <?= $sala['tempo_resposta'] ?> segundos por pergunta
         </p>
         
         <?php if ($ehHost): ?>
-            <p style="color: var(--cor-amarela);">
+            <p style="color: #fdc83a;">
                 <i class="bi bi-star-fill"></i> Você é o Host
             </p>
         <?php else: ?>
-            <p style="color: var(--cor-azul);">
-                <i class="bi bi-person"></i> Aguardando host iniciar o jogo...
+            <p style="color: #33a4e6;">
+                <i class="bi bi-person"></i> Aguardando host iniciar...
             </p>
         <?php endif; ?>
     </div>
@@ -67,8 +136,8 @@ error_log("É host: " . ($ehHost ? 'SIM' : 'NÃO'));
             <span class="contador-jogadores" id="contadorJogadores">0</span>
         </div>
         <div id="listaJogadores" class="lista-jogadores">
-            <div style="color: var(--cor-branco2); text-align: center;">
-                Carregando jogadores...
+            <div style="color: #c9d0d1; text-align: center;">
+                ✅ Lobby carregado! Buscando jogadores...
             </div>
         </div>
     </div>
@@ -88,41 +157,162 @@ error_log("É host: " . ($ehHost ? 'SIM' : 'NÃO'));
         <?php endif; ?>
     </div>
 
-    <div class="botoes-lobby">
-        <?php if ($ehHost): ?>
-            <button id="btnIniciar" class="btn-lobby btn-iniciar" disabled>
-                <i class="bi bi-play-circle"></i> Iniciar Jogo
-            </button>
-            <button id="btnFechar" class="btn-lobby btn-fechar">
-                <i class="bi bi-x-circle"></i> Fechar Sala
-            </button>
-        <?php else: ?>
-            <button id="btnSair" class="btn-lobby btn-sair">
-                <i class="bi bi-box-arrow-left"></i> Sair
-            </button>
-        <?php endif; ?>
-    </div>
-
     <script>
-        // 🚨 CORREÇÃO: Verificar se as variáveis PHP estão definidas
-        const codigoSala = "<?= isset($codigo) ? $codigo : '' ?>";
-        const ehHost = <?= isset($ehHost) && $ehHost ? 'true' : 'false'; ?>;
-        const idJogador = <?= isset($_SESSION['id_jogador']) ? $_SESSION['id_jogador'] : 'null'; ?>;
-        
-        console.log('🎯 Debug Lobby:');
-        console.log('Código:', codigoSala);
-        console.log('É Host:', ehHost);
-        console.log('ID Jogador:', idJogador);
-        
-        // 🚨 VERIFICAÇÃO EXTRA: Se codigoSala está vazio
-        if (!codigoSala) {
-            console.error('❌ ERRO: codigoSala está vazio!');
-            alert('Erro: Código da sala não encontrado. Volte para a página inicial.');
-            window.location.href = '../index.php';
-        }
-    </script>
+        const codigoSala = "<?= $codigo ?>";
+        const ehHost = <?= $ehHost ? 'true' : 'false'; ?>;
+        const idJogador = <?= $jogador['id_jogador']; ?>;
 
-    <script src="../public/js/lobby.js"></script>
+        class LobbySimples {
+            constructor() {
+                this.init();
+            }
+
+            async init() {
+                console.log('🎮 Lobby iniciado!');
+                this.configurarBotoes();
+                await this.carregarJogadores();
+                setInterval(() => this.carregarJogadores(), 3000);
+            }
+
+            async carregarJogadores() {
+                try {
+                    const formData = new FormData();
+                    formData.append('acao', 'listar_jogadores');
+                    formData.append('codigo', codigoSala);
+
+                    const response = await fetch('../utils/lobby_actions.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const resultado = await response.json();
+                    
+                    if (resultado.status === 'ok') {
+                        this.mostrarJogadores(resultado.jogadores);
+                    }
+                } catch (error) {
+                    console.error('Erro:', error);
+                }
+            }
+
+            mostrarJogadores(jogadores) {
+                const container = document.getElementById('listaJogadores');
+                if (!container) return;
+
+                if (!jogadores || jogadores.length === 0) {
+                    container.innerHTML = '<div style="color: #c9d0d1; text-align: center; padding: 20px;">😴 Nenhum jogador conectado</div>';
+                    return;
+                }
+
+                let html = '';
+                jogadores.forEach(jogador => {
+                    const ehEu = (jogador.id_jogador == idJogador);
+                    const ehHost = (jogador.is_host == 1);
+
+                    html += `
+                        <div class="jogador-item">
+                            <div class="jogador-nome">
+                                ${ehHost ? '👑' : '👤'} ${jogador.nome}
+                                ${ehEu ? '<span class="badge-vc">Você</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                
+                document.getElementById('contadorJogadores').textContent = jogadores.length;
+                
+                if (ehHost) {
+                    document.getElementById('btnIniciar').disabled = jogadores.length < 2;
+                }
+            }
+
+            configurarBotoes() {
+                if (ehHost) {
+                    document.getElementById('btnIniciar').onclick = () => this.iniciarJogo();
+                    document.getElementById('btnFechar').onclick = () => this.fecharSala();
+                } else {
+                    document.getElementById('btnSair').onclick = () => this.sairSala();
+                }
+            }
+
+            async iniciarJogo() {
+                if (confirm('Iniciar o jogo para todos os jogadores?')) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('acao', 'iniciar_jogo');
+                        formData.append('codigo', codigoSala);
+
+                        const response = await fetch('../utils/lobby_actions.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const resultado = await response.json();
+                        
+                        if (resultado.status === 'ok') {
+                            window.location.href = `game.php?codigo=${codigoSala}`;
+                        } else {
+                            alert('Erro: ' + resultado.mensagem);
+                        }
+                    } catch (error) {
+                        alert('Erro ao iniciar jogo');
+                    }
+                }
+            }
+
+            async fecharSala() {
+                if (confirm('Fechar a sala? Todos serão desconectados.')) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('acao', 'fechar_sala');
+                        formData.append('codigo', codigoSala);
+
+                        const response = await fetch('../utils/lobby_actions.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const resultado = await response.json();
+                        
+                        if (resultado.status === 'ok') {
+                            window.location.href = '../index.php';
+                        }
+                    } catch (error) {
+                        alert('Erro ao fechar sala');
+                    }
+                }
+            }
+
+            async sairSala() {
+                if (confirm('Sair da sala?')) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('acao', 'sair_sala');
+                        formData.append('codigo', codigoSala);
+
+                        const response = await fetch('../utils/lobby_actions.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const resultado = await response.json();
+                        
+                        if (resultado.status === 'ok') {
+                            window.location.href = '../index.php';
+                        }
+                    } catch (error) {
+                        alert('Erro ao sair');
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new LobbySimples();
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>
