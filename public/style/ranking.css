@@ -1,0 +1,36 @@
+@import url('style.css');
+
+.ranking-body {
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.ranking-item {
+    background: var(--cor-fundo);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--cor-azul2);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.posicao {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: var(--cor-amarela);
+    min-width: 50px;
+}
+
+.primeiro {
+    color: gold;
+}
+
+.segundo {
+    color: silver;
+}
+
+.terceiro {
+    color: #cd7f32;
+}
