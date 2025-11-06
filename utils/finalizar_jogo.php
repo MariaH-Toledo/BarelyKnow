@@ -15,7 +15,6 @@ if (empty($codigo)) {
     exit;
 }
 
-// Atualizar status da sala para encerrada
 $sql_update = "UPDATE salas SET status = 'encerrada' WHERE codigo_sala = ?";
 $stmt_update = $conn->prepare($sql_update);
 $stmt_update->bind_param("s", $codigo);

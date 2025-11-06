@@ -56,7 +56,7 @@ class LobbySimples {
     }
 
     mostrarJogadores(jogadores) {
-        console.log('Jogadores recebidos:', jogadores); // DEBUG
+        console.log('Jogadores recebidos:', jogadores);
     
         const container = document.getElementById('listaJogadores');
         if (!container) return;
@@ -66,7 +66,6 @@ class LobbySimples {
             return;
         }
 
-        // REMOVER duplicatas no cliente também (segurança extra)
         const jogadoresUnicos = [];
         const nomesVistos = new Set();
         
@@ -110,62 +109,72 @@ class LobbySimples {
         }
     }
 
-    // 🎯 CORRIGIR: Usar SweetAlert2 para pop-up
     async iniciarJogo() {
+        console.log('🔧 DEBUG: Clicou em iniciar jogo');
+    
         const resultado = await Swal.fire({
             title: 'Iniciar jogo?',
-            text: 'Todos os jogadores entrarão no jogo',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: 'var(--cor-azul)',
-            cancelButtonColor: 'var(--cor-rosa)',
+            confirmButtonColor: '#33a4e6',
+            cancelButtonColor: '#ff66bc',
             confirmButtonText: 'Sim, iniciar!',
             cancelButtonText: 'Cancelar',
-            background: 'var(--cor-fundo2)',
-            color: 'var(--cor-branco)'
+            background: '#1f1e1e',
+            color: 'white'
         });
 
         if (resultado.isConfirmed) {
+            console.log('🔧 DEBUG: Confirmou iniciar jogo');
+            
             try {
                 const formData = new FormData();
                 formData.append('acao', 'iniciar_jogo');
-                formData.append('codigo', codigoSala);
+                formData.append('codigo_sala', codigoSala);
 
+                console.log('🔧 DEBUG: Enviando requisição para:', '../utils/lobby_actions.php');
+                
                 const response = await fetch('../utils/lobby_actions.php', {
                     method: 'POST',
                     body: formData
                 });
                 
+                console.log('🔧 DEBUG: Resposta recebida, status:', response.status);
+                
                 const data = await response.json();
+                console.log('🔧 DEBUG: Dados da resposta:', data);
                 
                 if (data.status === 'ok') {
+                    console.log('🔧 DEBUG: Jogo iniciado com sucesso, redirecionando...');
                     Swal.fire({
                         title: 'Jogo iniciado!',
                         text: 'Redirecionando...',
                         icon: 'success',
                         timer: 1500,
                         showConfirmButton: false,
-                        background: 'var(--cor-fundo2)',
-                        color: 'var(--cor-branco)'
+                        background: '#1f1e1e',
+                        color: 'white'
                     }).then(() => {
                         window.location.href = `game.php?codigo=${codigoSala}`;
                     });
                 } else {
+                    console.log('🔧 DEBUG: Erro do servidor:', data.mensagem);
                     Swal.fire({
                         icon: 'error',
                         title: 'Erro',
                         text: data.mensagem,
-                        background: 'var(--cor-fundo2)',
-                        color: 'var(--cor-branco)'
+                        background: '#1f1e1e',
+                        color: 'white'
                     });
                 }
             } catch (error) {
+                console.log('🔧 DEBUG: Erro de rede:', error);
                 Swal.fire({
                     icon: 'error',
-                    title: 'Erro',
-                    text: 'Não foi possível iniciar o jogo',
-                    background: 'var(--cor-fundo2)',
-                    color: 'var(--cor-branco)'
+                    title: 'Erro de conexão',
+                    text: 'Não foi possível conectar ao servidor',
+                    background: '#1f1e1e',
+                    color: 'white'
                 });
             }
         }
@@ -255,12 +264,10 @@ class LobbySimples {
     }
 
     iniciarAtualizacao() {
-        // Atualizar lista de jogadores
         setInterval(() => {
             this.carregarJogadores();
-        }, 3000);
+        }, 2000);
         
-        // 🎯 ADICIONAR: Verificar status do jogo (apenas não-hosts)
         if (!ehHost) {
             setInterval(() => {
                 this.verificarStatusJogo();
