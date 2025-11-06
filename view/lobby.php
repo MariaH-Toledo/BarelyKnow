@@ -88,27 +88,6 @@ $ehHost = ($jogador['is_host'] == 1);
     <title>Lobby - <?= $codigo ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="../public/style/lobby.css">
-    <style>
-        body { background: #121212; color: white; font-family: Arial; margin: 0; padding: 20px; }
-        .lobby-header { text-align: center; margin-bottom: 30px; }
-        .lobby-codigo { color: #72d9eb; font-size: 2em; margin: 0; }
-        .lobby-info { color: #c9d0d1; font-size: 1.1em; }
-        .jogadores-section { background: #1f1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #33a4e6; }
-        .jogadores-titulo { color: white; font-size: 1.3em; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .contador-jogadores { background: #ff66bc; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
-        .lista-jogadores { display: flex; flex-direction: column; gap: 8px; }
-        .jogador-item { background: #121212; padding: 12px; border-radius: 8px; border: 1px solid #33a4e6; display: flex; justify-content: space-between; }
-        .jogador-nome { color: white; display: flex; align-items: center; gap: 8px; }
-        .badge-vc { background: #ff66bc; color: white; padding: 2px 6px; border-radius: 8px; font-size: 0.7em; }
-        .badge-host { background: #fdc83a; color: #121212; padding: 2px 6px; border-radius: 8px; font-size: 0.7em; }
-        .botoes-lobby { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
-        .btn-lobby { padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; transition: all 0.2s; }
-        .btn-lobby:hover { transform: translateY(-2px); }
-        .btn-iniciar { background: #fff492; color: #121212; }
-        .btn-iniciar:disabled { background: #666; cursor: not-allowed; }
-        .btn-fechar { background: #ff66bc; color: white; }
-        .btn-sair { background: #33a4e6; color: white; }
-    </style>
 </head>
 <body>
     <div class="lobby-header">
