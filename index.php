@@ -22,18 +22,18 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
         <h1 class="titulo-index">BarelyKnow</h1>
         <p class="subtitulo-index">Hora de colocar os conhecimentos em prática... ou pelo menos a sorte!</p>
 
-        <button class="btn btn-lg btn-custom-index btn-criar" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('criar')">
+        <button class="btn btn-lg btn-custom-index btn-criar-index" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('criar')">
             <i class="bi bi-plus-circle"></i> Criar Sala
         </button>
         <br>
-        <button class="btn btn-lg btn-custom-index btn-entrar" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('entrar')">
+        <button class="btn btn-lg btn-custom-index btn-entrar-index" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('entrar')">
             <i class="bi bi-box-arrow-in-right"></i> Entrar em Sala
         </button>
     </div>
 
     <div class="modal fade" id="modalSala" tabindex="-1" aria-labelledby="modalSalaLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+            <div class="modal-content modal-content-dark">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalTitle">Criar Sala</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -60,7 +60,7 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
 
                             <div class="mb-3">
                                 <label class="form-label">Rodadas:</label>
-                                <input type="number" name="rodadas" class="form-control form-control-dark" min="3" max="20" value="5" required>
+                                <input type="number" name="rodadas" class="form-control form-control-dark" min="3" max="20" value="3" required>
                             </div>
 
                             <div class="mb-3">
@@ -76,7 +76,7 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
                         <div id="camposEntrar" style="display: none;">
                             <div class="mb-3">
                                 <label class="form-label">Código da Sala:</label>
-                                <input type="text" name="codigo_sala" maxlength="6" class="form-control form-control-dark text-uppercase" required>
+                                <input type="text" name="codigo_sala" maxlength="6" class="form-control form-control-dark text-uppercase" placeholder="Ex: ABC123">
                             </div>
                         </div>
 
@@ -110,12 +110,11 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
                 btnSubmit.textContent = 'Criar Sala';
                 btnSubmit.className = 'btn btn-success';
 
-                document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
-                    campo.disabled = false;
-                });
                 document.querySelectorAll('#camposEntrar input').forEach(campo => {
-                    campo.disabled = true;
                     campo.required = false;
+                });
+                document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
+                    campo.required = true;
                 });
 
             } else {
@@ -123,49 +122,26 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
                 camposCriar.style.display = 'none';
                 camposEntrar.style.display = 'block';
                 btnSubmit.textContent = 'Entrar na Sala';
-                btnSubmit.className = 'btn btn-primary';
+                btnSubmit.className = 'btn btn-primary-custom btn-custom';
 
-                document.querySelectorAll('#camposEntrar input').forEach(campo => {
-                    campo.disabled = false;
-                    campo.required = true;
-                });
                 document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
-                    campo.disabled = true;
                     campo.required = false;
+                });
+                document.querySelectorAll('#camposEntrar input').forEach(campo => {
+                    campo.required = true;
                 });
 
                 setTimeout(() => {
                     const inputCodigo = document.querySelector('input[name="codigo_sala"]');
-                    if (inputCodigo) {
-                        inputCodigo.focus();
-                    }
+                    if (inputCodigo) inputCodigo.focus();
                 }, 100);
             }
         }
 
-        document.getElementById('modalSala').addEventListener('shown.bs.modal', function() {
-            setTimeout(() => {
-                if (modalTipo === 'entrar') {
-                    const inputCodigo = document.querySelector('input[name="codigo_sala"]');
-                    if (inputCodigo) {
-                        inputCodigo.focus();
-                    }
-                } else {
-                    const inputNome = document.querySelector('input[name="nome"]');
-                    if (inputNome) {
-                        inputNome.focus();
-                    }
-                }
-            }, 150);
-        });
-
         document.getElementById('modalSala').addEventListener('hidden.bs.modal', function() {
             document.getElementById('formSala').reset();
             document.querySelectorAll('input, select').forEach(campo => {
-                campo.disabled = false;
-                if (campo.name === 'codigo_sala') {
-                    campo.required = false;
-                }
+                campo.required = false;
             });
         });
 
@@ -189,16 +165,12 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
                 
                     Swal.fire({
                         icon: 'success',
-                        iconColor: 'var(--cor-azul)',
                         title: modalTipo === 'criar' ? 'Sala criada!' : 'Entrou na sala!',
                         html: modalTipo === 'criar' ? `Sala criada com sucesso!<br><strong>Código: ${data.codigo}</strong>` : 'Redirecionando...',
                         timer: 2000,
                         showConfirmButton: false,
                         background: 'var(--cor-fundo2)',
-                        color: 'var(--cor-branco)',
-                        customClass: {
-                            popup: 'sweetalert-dark'
-                        }
+                        color: 'var(--cor-branco)'
                     }).then(() => {
                         window.location.href = `view/lobby.php?codigo=${data.codigo}`;
                     });
@@ -208,8 +180,7 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
                         title: 'Erro',
                         text: data.mensagem,
                         background: 'var(--cor-fundo2)',
-                        color: 'var(--cor-branco)',
-                        iconColor: 'var(--cor-rosa)'
+                        color: 'var(--cor-branco)'
                     });
                 }
             } catch (error) {
@@ -218,8 +189,7 @@ $categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC
                     title: 'Erro de conexão',
                     text: 'Não foi possível conectar ao servidor',
                     background: 'var(--cor-fundo2)',
-                    color: 'var(--cor-branco)',
-                    iconColor: 'var(--cor-rosa)'
+                    color: 'var(--cor-branco)'
                 });
             }
         });     
