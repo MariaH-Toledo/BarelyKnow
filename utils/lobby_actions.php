@@ -11,39 +11,30 @@ if (empty($codigo)) {
     exit;
 }
 
-// Buscar sala
-$sql_sala = "SELECT id_sala, status FROM salas WHERE codigo_sala = ?";
-$stmt_sala = $conn->prepare($sql_sala);
-$stmt_sala->bind_param("s", $codigo);
-$stmt_sala->execute();
-$result_sala = $stmt_sala->get_result();
+$sql = "SELECT id_sala FROM salas WHERE codigo_sala = '$codigo'";
+$result = $conn->query($sql);
 
-if ($result_sala->num_rows === 0) {
+if ($result->num_rows === 0) {
     echo json_encode(["status" => "erro", "mensagem" => "Sala não encontrada"]);
     exit;
 }
 
-$sala = $result_sala->fetch_assoc();
+$sala = $result->fetch_assoc();
 $id_sala = $sala['id_sala'];
 
-// Verificar se é host
 $id_jogador = $_SESSION['id_jogador'] ?? 0;
-$sql_host = "SELECT is_host FROM jogadores WHERE id_jogador = ? AND id_sala = ?";
-$stmt_host = $conn->prepare($sql_host);
-$stmt_host->bind_param("ii", $id_jogador, $id_sala);
-$stmt_host->execute();
-$host_data = $stmt_host->get_result()->fetch_assoc();
-$eh_host = ($host_data && $host_data['is_host'] == 1);
+$sql_jogador = "SELECT is_host FROM jogadores WHERE id_jogador = $id_jogador AND id_sala = $id_sala";
+$result_jogador = $conn->query($sql_jogador);
+$jogador_atual = $result_jogador->fetch_assoc();
+
+$eh_host = ($jogador_atual && $jogador_atual['is_host'] == 1);
 
 switch ($acao) {
     case 'listar_jogadores':
-        $sql = "SELECT id_jogador, nome, is_host FROM jogadores 
-                WHERE id_sala = ? 
+        $sql = "SELECT DISTINCT id_jogador, nome, is_host FROM jogadores 
+                WHERE id_sala = $id_sala 
                 ORDER BY is_host DESC, id_jogador ASC";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $id_sala);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $result = $conn->query($sql);
         
         $jogadores = [];
         while ($row = $result->fetch_assoc()) {
@@ -55,50 +46,56 @@ switch ($acao) {
 
     case 'iniciar_jogo':
         if (!$eh_host) {
-            echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode iniciar"]);
+            echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode iniciar o jogo"]);
             exit;
         }
 
-        // Verificar mínimo de jogadores
-        $sql_count = "SELECT COUNT(*) as total FROM jogadores WHERE id_sala = ?";
-        $stmt_count = $conn->prepare($sql_count);
-        $stmt_count->bind_param("i", $id_sala);
-        $stmt_count->execute();
-        $total = $stmt_count->get_result()->fetch_assoc()['total'];
+        $sql_count = "SELECT COUNT(DISTINCT id_jogador) as total FROM jogadores WHERE id_sala = $id_sala";
+        $result_count = $conn->query($sql_count);
+        $total = $result_count->fetch_assoc()['total'];
         
         if ($total < 2) {
             echo json_encode(["status" => "erro", "mensagem" => "Mínimo 2 jogadores"]);
             exit;
         }
 
-        // Iniciar jogo
-        $sql_update = "UPDATE salas SET status = 'iniciada' WHERE id_sala = ?";
-        $stmt_update = $conn->prepare($sql_update);
-        $stmt_update->bind_param("i", $id_sala);
-        
-        if ($stmt_update->execute()) {
-            echo json_encode(["status" => "ok"]);
-        } else {
-            echo json_encode(["status" => "erro", "mensagem" => "Erro ao iniciar"]);
-        }
+        $conn->query("UPDATE salas SET status = 'iniciada' WHERE id_sala = $id_sala");
+        echo json_encode(["status" => "ok"]);
         break;
 
     case 'sair_sala':
         if ($eh_host) {
-            echo json_encode(["status" => "erro", "mensagem" => "Host deve fechar a sala"]);
+            echo json_encode(["status" => "erro", "mensagem" => "Host deve fechar a sala em vez de sair"]);
             exit;
         }
 
-        $sql_delete = "DELETE FROM jogadores WHERE id_jogador = ?";
-        $stmt_delete = $conn->prepare($sql_delete);
-        $stmt_delete->bind_param("i", $id_jogador);
-        
-        if ($stmt_delete->execute()) {
-            session_destroy();
-            echo json_encode(["status" => "ok"]);
-        } else {
-            echo json_encode(["status" => "erro", "mensagem" => "Erro ao sair"]);
+        $conn->query("DELETE FROM jogadores WHERE id_jogador = $id_jogador");
+        session_destroy();
+        echo json_encode(["status" => "ok"]);
+        break;
+
+    case 'fechar_sala':
+        if (!$eh_host) {
+            echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode fechar a sala"]);
+            exit;
         }
+
+        $conn->query("DELETE FROM salas WHERE id_sala = $id_sala");
+        session_destroy();
+        echo json_encode(["status" => "ok"]);
+        break;
+
+    case 'verificar_status':
+        $sql_status = "SELECT status FROM salas WHERE id_sala = $id_sala";
+        $result_status = $conn->query($sql_status);
+        
+        if ($result_status->num_rows === 0) {
+            echo json_encode(["status" => "erro", "mensagem" => "Sala não encontrada"]);
+            exit;
+        }
+        
+        $status = $result_status->fetch_assoc();
+        echo json_encode(["status" => $status['status']]);
         break;
 
     default:
