@@ -1,0 +1,2201 @@
+index.php:
+<?php
+session_start();
+include "db/conexao.php";
+$categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC");
+?>
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarelyKnow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="public/style/index.css">
+    <link rel="icon" href="public/img/icon.png">
+</head>
+
+<body class="body-index">
+    <div class="text-center">
+        <img src="public/img/logo-principal.png" alt="Logo BarelyKnow" class="logo-index">
+        <h1 class="titulo-index">BarelyKnow</h1>
+        <p class="subtitulo-index">Hora de colocar os conhecimentos em prática... ou pelo menos a sorte!</p>
+
+        <button class="btn btn-lg btn-custom-index btn-criar-index" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('criar')">
+            <i class="bi bi-plus-circle"></i> Criar Sala
+        </button>
+        <br>
+        <button class="btn btn-lg btn-custom-index btn-entrar-index" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('entrar')">
+            <i class="bi bi-box-arrow-in-right"></i> Entrar em Sala
+        </button>
+    </div>
+
+    <div class="modal fade" id="modalSala" tabindex="-1" aria-labelledby="modalSalaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-content-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Criar Sala</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formSala">
+                        <div class="mb-3">
+                            <label class="form-label">Seu nome:</label>
+                            <input type="text" name="nome" class="form-control form-control-dark" required>
+                        </div>
+
+                        <div id="camposCriar">
+                            <div class="mb-3">
+                                <label class="form-label">Categoria:</label>
+                                <select name="categoria" class="form-select form-select-dark" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <?php while ($cat = $categorias->fetch_assoc()) { ?>
+                                        <option value="<?= $cat['id_categoria'] ?>">
+                                            <?= htmlspecialchars($cat['nome_categoria']) ?>
+                                        </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Rodadas:</label>
+                                <input type="number" name="rodadas" class="form-control form-control-dark" min="3" max="20" value="3" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Tempo por pergunta:</label>
+                                <select name="tempo_resposta" class="form-select form-select-dark" required>
+                                    <option value="10">10 segundos</option>
+                                    <option value="15" selected>15 segundos</option>
+                                    <option value="20">20 segundos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="camposEntrar" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Código da Sala:</label>
+                                <input type="text" name="codigo_sala" maxlength="6" class="form-control form-control-dark text-uppercase" placeholder="Ex: ABC123">
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success" id="btnSubmit">Criar Sala</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script>
+        let modalTipo = 'criar';
+
+        function abrirModal(tipo) {
+            modalTipo = tipo;
+            const modalTitle = document.getElementById('modalTitle');
+            const camposCriar = document.getElementById('camposCriar');
+            const camposEntrar = document.getElementById('camposEntrar');
+            const btnSubmit = document.getElementById('btnSubmit');
+        
+            if (tipo === 'criar') {
+                modalTitle.textContent = 'Criar Sala';
+                camposCriar.style.display = 'block';
+                camposEntrar.style.display = 'none';
+                btnSubmit.textContent = 'Criar Sala';
+                btnSubmit.className = 'btn btn-success';
+
+                document.querySelectorAll('#camposEntrar input').forEach(campo => {
+                    campo.required = false;
+                });
+                document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
+                    campo.required = true;
+                });
+
+            } else {
+                modalTitle.textContent = 'Entrar em Sala';
+                camposCriar.style.display = 'none';
+                camposEntrar.style.display = 'block';
+                btnSubmit.textContent = 'Entrar na Sala';
+                btnSubmit.className = 'btn btn-primary-custom btn-custom';
+
+                document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
+                    campo.required = false;
+                });
+                document.querySelectorAll('#camposEntrar input').forEach(campo => {
+                    campo.required = true;
+                });
+
+                setTimeout(() => {
+                    const inputCodigo = document.querySelector('input[name="codigo_sala"]');
+                    if (inputCodigo) inputCodigo.focus();
+                }, 100);
+            }
+        }
+
+        document.getElementById('modalSala').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('formSala').reset();
+            document.querySelectorAll('input, select').forEach(campo => {
+                campo.required = false;
+            });
+        });
+
+        document.getElementById('formSala').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            const url = modalTipo === 'criar' ? 'view/criar_sala.php' : 'view/entrar_sala.php';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+            
+                const data = await response.json();
+            
+                if (data.status === 'ok') {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalSala'));
+                    modal.hide();
+                
+                    Swal.fire({
+                        icon: 'success',
+                        title: modalTipo === 'criar' ? 'Sala criada!' : 'Entrou na sala!',
+                        html: modalTipo === 'criar' ? `Sala criada com sucesso!<br><strong>Código: ${data.codigo}</strong>` : 'Redirecionando...',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)'
+                    }).then(() => {
+                        window.location.href = `view/lobby.php?codigo=${data.codigo}`;
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: data.mensagem,
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)'
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro de conexão',
+                    text: 'Não foi possível conectar ao servidor',
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)'
+                });
+            }
+        });     
+    </script>
+</body>
+</html>
+
+db/barelyknow_db.php:
+CREATE DATABASE barelyknow;
+USE barelyknow;
+
+CREATE TABLE categorias(
+    id_categoria INT AUTO_INCREMENT PRIMARY KEY,
+    nome_categoria VARCHAR(50) UNIQUE
+);
+
+CREATE TABLE salas(
+    id_sala INT AUTO_INCREMENT PRIMARY KEY,
+    codigo_sala VARCHAR(6) UNIQUE,
+    id_categoria INT,
+    rodadas INT,
+    tempo_resposta INT,
+    status ENUM('aberta', 'iniciada', 'encerrada') DEFAULT 'aberta',
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria)
+);
+
+CREATE TABLE jogadores(
+    id_jogador INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100),
+    pontos INT DEFAULT 0,
+    id_sala INT,
+    is_host BOOLEAN DEFAULT 0,
+    FOREIGN KEY (id_sala) REFERENCES salas(id_sala) ON DELETE CASCADE
+);
+
+CREATE TABLE perguntas(
+    id_pergunta INT AUTO_INCREMENT PRIMARY KEY,
+    id_categoria INT,
+    pergunta TEXT,
+    alternativa1 VARCHAR(255),
+    alternativa2 VARCHAR(255),
+    alternativa3 VARCHAR(255),
+    alternativa4 VARCHAR(255),
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria)
+);
+
+CREATE TABLE respostas(
+    id_resposta INT AUTO_INCREMENT PRIMARY KEY,
+    id_jogador INT,
+    id_pergunta INT,
+    resposta_escolhida VARCHAR(255),
+    correta BOOLEAN,
+    tempo_resposta INT,
+    FOREIGN KEY (id_jogador) REFERENCES jogadores(id_jogador),
+    FOREIGN KEY (id_pergunta) REFERENCES perguntas(id_pergunta)
+);
+
+SELECT * FROM categorias;
+SELECT * FROM jogadores;
+SELECT * FROM perguntas;
+SELECT * FROM respostas;
+SELECT * FROM salas;
+
+INSERT INTO categorias (nome_categoria) VALUES 
+('Esportes'),
+('Conhecimentos Gerais'), 
+('Tecnologia'),
+('Cultura Pop'),
+('Cinema'),
+('Animação');
+
+INSERT INTO perguntas (id_categoria, pergunta, alternativa1, alternativa2, alternativa3, alternativa4) VALUES
+(1, 'Quantos jogadores formam um time de futebol em campo?', '11 jogadores', '10 jogadores', '9 jogadores', '12 jogadores'),
+(1, 'Qual país ganhou mais Copas do Mundo?', 'Brasil', 'Alemanha', 'Itália', 'Argentina'),
+(1, 'Quantos pontos vale um touchdown no futebol americano?', '6 pontos', '7 pontos', '3 pontos', '2 pontos'),
+(1, 'Qual esporte é jogado em uma quadra de 28x15m?', 'Basquete', 'Vôlei', 'Tênis', 'Handebol'),
+(1, 'Quantos sets são necessários para vencer no vôlei?', '3 sets', '2 sets', '4 sets', '5 sets'),
+(1, 'Qual nadador tem mais medalhas olímpicas?', 'Michael Phelps', 'Mark Spitz', 'Ian Thorpe', 'César Cielo'),
+(1, 'Quantos buracos tem um campo de golfe padrão?', '18 buracos', '9 buracos', '12 buracos', '15 buracos'),
+(1, 'Qual esporte usa uma "bola oval"?', 'Rugby', 'Futebol', 'Basquete', 'Vôlei'),
+(1, 'Quantos jogadores tem um time de beisebol?', '9 jogadores', '7 jogadores', '10 jogadores', '8 jogadores'),
+(1, 'Qual país inventou o judô?', 'Japão', 'China', 'Coreia', 'Brasil'),
+(1, 'Quantos metros tem uma maratona?', '42.195 metros', '40.000 metros', '45.000 metros', '38.000 metros'),
+(1, 'Qual esporte é conhecido como "xadrez humano"?', 'Futebol Americano', 'Basquete', 'Tênis', 'Natação'),
+(1, 'Quantos rounds tem uma luta de boxe profissional?', '12 rounds', '10 rounds', '15 rounds', '8 rounds'),
+(1, 'Qual atleta é chamado de "Raio"?', 'Usain Bolt', 'Michael Johnson', 'Carl Lewis', 'Asafa Powell'),
+(1, 'Quantos jogadores tem um time de hóquei no gelo?', '6 jogadores', '5 jogadores', '7 jogadores', '8 jogadores'),
+(1, 'Qual esporte usa um "birdie"?', 'Badminton', 'Tênis', 'Vôlei', 'Futebol'),
+(1, 'Quantos Grand Slams existem no tênis?', '4 torneios', '3 torneios', '5 torneios', '6 torneios'),
+(1, 'Qual país sediou as Olimpíadas de 2016?', 'Brasil', 'China', 'Inglaterra', 'Estados Unidos'),
+(1, 'Quantos jogadores tem um time de futsal?', '5 jogadores', '6 jogadores', '4 jogadores', '7 jogadores'),
+(1, 'Qual esporte é jogado em um "ringue"?', 'Boxe', 'Judô', 'Luta Livre', 'Ginástica'),
+
+(2, 'Qual é a capital do Brasil?', 'Brasília', 'São Paulo', 'Rio de Janeiro', 'Belo Horizonte'),
+(2, 'Quantos continentes existem?', '7 continentes', '5 continentes', '6 continentes', '8 continentes'),
+(2, 'Qual é o maior oceano do mundo?', 'Oceano Pacífico', 'Oceano Atlântico', 'Oceano Índico', 'Oceano Ártico'),
+(2, 'Quem pintou a Mona Lisa?', 'Leonardo da Vinci', 'Vincent van Gogh', 'Pablo Picasso', 'Michelangelo'),
+(2, 'Qual é o elemento químico representado por "O"?', 'Oxigênio', 'Ouro', 'Ósmio', 'Oganésson'),
+(2, 'Quantos lados tem um hexágono?', '6 lados', '5 lados', '7 lados', '8 lados'),
+(2, 'Qual é o planeta conhecido como "Planeta Vermelho"?', 'Marte', 'Vênus', 'Júpiter', 'Saturno'),
+(2, 'Quem escreveu "Dom Casmurro"?', 'Machado de Assis', 'José de Alencar', 'Lima Barreto', 'Carlos Drummond'),
+(2, 'Qual é a moeda do Japão?', 'Iene', 'Won', 'Yuan', 'Dólar'),
+(2, 'Quantos ossos tem o corpo humano?', '206 ossos', '200 ossos', '210 ossos', '195 ossos'),
+(2, 'Qual é o maior animal terrestre?', 'Elefante africano', 'Girafa', 'Hipopótamo', 'Rinoceronte'),
+(2, 'Quem descobriu a penicilina?', 'Alexander Fleming', 'Louis Pasteur', 'Marie Curie', 'Albert Einstein'),
+(2, 'Qual é a capital da França?', 'Paris', 'Londres', 'Roma', 'Berlim'),
+(2, 'Quantos anos tem um século?', '100 anos', '50 anos', '200 anos', '1000 anos'),
+(2, 'Qual é o rio mais longo do mundo?', 'Rio Amazonas', 'Rio Nilo', 'Rio Mississippi', 'Rio Yangtzé'),
+(2, 'Quem foi o primeiro homem na Lua?', 'Neil Armstrong', 'Buzz Aldrin', 'Yuri Gagarin', 'John Glenn'),
+(2, 'Qual é o país mais populoso do mundo?', 'China', 'Índia', 'Estados Unidos', 'Indonésia'),
+(2, 'Quantos planetas existem no sistema solar?', '8 planetas', '9 planetas', '7 planetas', '10 planetas'),
+(2, 'Qual é a língua mais falada no mundo?', 'Mandarim', 'Inglês', 'Espanhol', 'Hindi'),
+(2, 'Quem escreveu "Romeu e Julieta"?', 'William Shakespeare', 'Charles Dickens', 'Jane Austen', 'Victor Hugo'),
+
+(3, 'O que significa HTML?', 'HyperText Markup Language', 'HighTech Modern Language', 'Hyper Transfer Markup Language', 'HighText Machine Language'),
+(3, 'Qual empresa criou o Windows?', 'Microsoft', 'Apple', 'Google', 'IBM'),
+(3, 'O que significa "CPU"?', 'Central Processing Unit', 'Computer Processing Unit', 'Central Program Unit', 'Computer Program Utility'),
+(3, 'Qual destes NÃO é um sistema operacional?', 'Google Chrome', 'Windows', 'Linux', 'macOS'),
+(3, 'Quantos bits tem um byte?', '8 bits', '4 bits', '16 bits', '32 bits'),
+(3, 'Qual empresa criou o iPhone?', 'Apple', 'Samsung', 'Google', 'Microsoft'),
+(3, 'O que significa "URL"?', 'Uniform Resource Locator', 'Universal Resource Link', 'Uniform Reference Location', 'Universal Reference Locator'),
+(3, 'Qual destes é um navegador web?', 'Google Chrome', 'Microsoft Word', 'Adobe Photoshop', 'Windows Media Player'),
+(3, 'O que significa "PDF"?', 'Portable Document Format', 'Personal Data File', 'Public Document Form', 'Printed Document File'),
+(3, 'Qual empresa criou o Android?', 'Google', 'Apple', 'Microsoft', 'Samsung'),
+(3, 'O que significa "Wi-Fi"?', 'Wireless Fidelity', 'Wireless Frequency', 'Wide Frequency', 'Wireless Internet'),
+(3, 'Qual destes NÃO é uma rede social?', 'Microsoft Excel', 'Facebook', 'Instagram', 'Twitter'),
+(3, 'O que significa "RAM"?', 'Random Access Memory', 'Read Access Memory', 'Random Available Memory', 'Read Available Memory'),
+(3, 'Qual empresa criou o Photoshop?', 'Adobe', 'Microsoft', 'Apple', 'Corel'),
+(3, 'O que significa "HTTP"?', 'HyperText Transfer Protocol', 'HighTech Transfer Protocol', 'Hyper Transfer Text Protocol', 'High Transfer Text Protocol'),
+(3, 'Qual destes é um antivírus?', 'Avast', 'Google Drive', 'Microsoft Word', 'Adobe Reader'),
+(3, 'O que significa "SSD"?', 'Solid State Drive', 'Super Speed Disk', 'System Storage Device', 'Solid Storage Drive'),
+(3, 'Qual empresa criou a linguagem Java?', 'Sun Microsystems', 'Microsoft', 'Google', 'Apple'),
+(3, 'O que significa "VPN"?', 'Virtual Private Network', 'Virtual Public Network', 'Verified Private Network', 'Virtual Protocol Network'),
+(3, 'Qual destes é um banco de dados?', 'MySQL', 'Java', 'Python', 'HTML'),
+
+(4, 'Quem canta a música "Shake It Off"?', 'Taylor Swift', 'Ariana Grande', 'Billie Eilish', 'Lady Gaga'),
+(4, 'Qual série tem a casa "Stark" e "Lannister"?', 'Game of Thrones', 'Stranger Things', 'The Walking Dead', 'Breaking Bad'),
+(4, 'Quem é o criador da Marvel?', 'Stan Lee', 'Jack Kirby', 'Steve Ditko', 'Walt Disney'),
+(4, 'Qual cantor é conhecido como "Rei do Pop"?', 'Michael Jackson', 'Elvis Presley', 'Prince', 'Justin Bieber'),
+(4, 'Qual banda britânica é conhecida como "Fab Four"?', 'The Beatles', 'Rolling Stones', 'Queen', 'Led Zeppelin'),
+(4, 'Quem interpreta o Homem de Ferro no MCU?', 'Robert Downey Jr.', 'Chris Evans', 'Chris Hemsworth', 'Mark Ruffalo'),
+(4, 'Qual é o nome real da Lady Gaga?', 'Stefani Germanotta', 'Madonna Ciccone', 'Beyoncé Knowles', 'Katy Perry'),
+(4, 'Qual série tem os personagens "Eleven" e "Mike"?', 'Stranger Things', 'Riverdale', 'Outer Banks', 'The 100'),
+(4, 'Quem canta "Bohemian Rhapsody"?', 'Queen', 'The Beatles', 'Rolling Stones', 'Led Zeppelin'),
+(4, 'Qual atriz interpretou Hermione em Harry Potter?', 'Emma Watson', 'Emma Stone', 'Jennifer Lawrence', 'Kristen Stewart'),
+(4, 'Quem é o criador do Facebook?', 'Mark Zuckerberg', 'Bill Gates', 'Steve Jobs', 'Elon Musk'),
+(4, 'Qual cantora é conhecida como "Rainha do Pop"?', 'Madonna', 'Britney Spears', 'Rihanna', 'Beyoncé'),
+(4, 'Qual série tem "Walter White" e "Jesse Pinkman"?', 'Breaking Bad', 'Better Call Saul', 'The Sopranos', 'Narcos'),
+(4, 'Quem canta "Bad Guy"?', 'Billie Eilish', 'Ariana Grande', 'Dua Lipa', 'Olivia Rodrigo'),
+(4, 'Qual é o nome do mascote da Nintendo?', 'Mario', 'Sonic', 'Pikachu', 'Crash Bandicoot'),
+(4, 'Quem interpreta o Coringa no filme de 2019?', 'Joaquin Phoenix', 'Heath Ledger', 'Jared Leto', 'Jack Nicholson'),
+(4, 'Qual banda tem o álbum "The Dark Side of the Moon"?', 'Pink Floyd', 'The Beatles', 'Led Zeppelin', 'Queen'),
+(4, 'Quem é conhecido como "Beyhive"?', 'Fãs da Beyoncé', 'Fãs da Taylor Swift', 'Fãs da Rihanna', 'Fãs da Lady Gaga'),
+(4, 'Qual série tem "Sherlock Holmes" moderno?', 'Sherlock', 'Elementary', 'Mentalist', 'Castle'),
+(4, 'Quem canta "Blinding Lights"?', 'The Weeknd', 'Drake', 'Post Malone', 'Ed Sheeran'),
+
+(5, 'Qual dos seguintes filmes foi protagonizado pelo Charlie Chaplin?', 'Tempos Modernos', 'Star Wars', 'Toy Story', 'Frozen'),
+(5, 'Quem dirigiu "Titanic"?', 'James Cameron', 'Steven Spielberg', 'Christopher Nolan', 'Quentin Tarantino'),
+(5, 'Qual filme ganhou o Oscar de Melhor Filme em 2020?', 'Parasita', '1917', 'Joker', 'Once Upon a Time in Hollywood'),
+(5, 'Quem interpreta Jack Sparrow?', 'Johnny Depp', 'Orlando Bloom', 'Leonardo DiCaprio', 'Brad Pitt'),
+(5, 'Qual filme tem a frase "May the Force be with you"?', 'Star Wars', 'Star Trek', 'Guardians of the Galaxy', 'The Matrix'),
+(5, 'Quem dirigiu "O Poderoso Chefão"?', 'Francis Ford Coppola', 'Martin Scorsese', 'Alfred Hitchcock', 'Stanley Kubrick'),
+(5, 'Qual ator interpreta James Bond em "007 - Cassino Royale"?', 'Daniel Craig', 'Pierce Brosnan', 'Sean Connery', 'Roger Moore'),
+(5, 'Qual filme tem um personagem chamado "Forrest Gump"?', 'Forrest Gump', 'Rain Man', 'The Curious Case of Benjamin Button', 'Big'),
+(5, 'Quem interpreta a Rainha Elizabeth em "The Crown"?', 'Claire Foy', 'Emma Corrin', 'Olivia Colman', 'Helena Bonham Carter'),
+(5, 'Qual filme ganhou 11 Oscars?', 'Titanic', 'Ben-Hur', 'The Lord of the Rings', 'La La Land'),
+(5, 'Quem é o diretor de "Interestelar"?', 'Christopher Nolan', 'Steven Spielberg', 'James Cameron', 'Ridley Scott'),
+(5, 'Qual filme tem os personagens "Mufasa" e "Simba"?', 'O Rei Leão', 'Aladdin', 'A Bela e a Fera', 'Mulan'),
+(5, 'Quem interpreta Tony Stark no MCU?', 'Robert Downey Jr.', 'Chris Evans', 'Chris Hemsworth', 'Mark Ruffalo'),
+(5, 'Qual filme tem a frase "I will be back"?', 'O Exterminador do Futuro', 'Duro de Matar', 'Rambo', 'Mad Max'),
+(5, 'Quem dirigiu "Cidade de Deus"?', 'Fernando Meirelles', 'José Padilha', 'Walter Salles', 'Breno Silveira'),
+(5, 'Qual filme tem o personagem "Vito Corleone"?', 'O Poderoso Chefão', 'Scarface', 'Os Intocáveis', 'Casino'),
+(5, 'Quem interpreta Neo em "The Matrix"?', 'Keanu Reeves', 'Laurence Fishburne', 'Hugo Weaving', 'Carrie-Anne Moss'),
+(5, 'Qual filme ganhou o primeiro Oscar de Melhor Filme?', 'Wings', 'Sunrise', 'The Jazz Singer', 'Metropolis'),
+(5, 'Quem é conhecido como "Rei do Terror" no cinema?', 'Stephen King', 'Alfred Hitchcock', 'Wes Craven', 'John Carpenter'),
+(5, 'Qual filme tem a música "My Heart Will Go On"?', 'Titanic', 'Ghost', 'The Bodyguard', 'Dirty Dancing'),
+
+(6, 'Qual é o irmão do Gumball?', 'Darwin', 'Jake', 'Elsa', 'Bob Esponja'),
+(6, 'Qual estúdio criou "Toy Story"?', 'Pixar', 'Disney', 'DreamWorks', 'Studio Ghibli'),
+(6, 'Qual é o nome do peixe em "Procurando Nemo"?', 'Nemo', 'Dory', 'Marlin', 'Gill'),
+(6, 'Quem é o vilão em "A Pequena Sereia"?', 'Úrsula', 'Malévola', 'Jafar', 'Scar'),
+(6, 'Qual é o nome do dragão em "Como Treinar Seu Dragão"?', 'Banguela', 'Solsitício', 'Fúria da Noite', 'Vermelho'),
+(6, 'Qual personagem diz "Até mais, e obrigado pelos peixes!"?', 'Dory', 'Nemo', 'Marlin', 'Pearl'),
+(6, 'Qual estúdio criou "A Viagem de Chihiro"?', 'Studio Ghibli', 'Pixar', 'Disney', 'DreamWorks'),
+(6, 'Qual é o nome real do Homem-Aranha nos filmes da Marvel?', 'Peter Parker', 'Miles Morales', 'Tony Stark', 'Steve Rogers'),
+(6, 'Qual personagem vive em um abacaxi no fundo do mar?', 'Bob Esponja', 'Patrick', 'Lula Molusco', 'Senhor Siriguejo'),
+(6, 'Qual é o nome do rato na Disney?', 'Mickey Mouse', 'Jerry', 'Stuart Little', 'Remy'),
+(6, 'Qual filme tem os personagens "Remy" e "Linguini"?', 'Ratatouille', 'Os Incríveis', 'Carros', 'Procurando Nemo'),
+(6, 'Qual é o nome do urso na Disney?', 'Zé Colmeia', 'Poo', 'Baloo', 'Winnie the Pooh'),
+(6, 'Qual personagem diz "Hakuna Matata"?', 'Timão e Pumba', 'Simba e Nala', 'Zazu', 'Rafiki'),
+(6, 'Qual estúdio criou "Shrek"?', 'DreamWorks', 'Disney', 'Pixar', 'Blue Sky'),
+(6, 'Qual é o nome da princesa em "Frozen"?', 'Elsa', 'Anna', 'Rapunzel', 'Merida'),
+(6, 'Qual personagem tem um gancho no lugar da mão?', 'Capitão Gancho', 'Jack Sparrow', 'Barba Negra', 'Long John Silver'),
+(6, 'Qual é o nome do cavalo em "Toy Story"?', 'Bulleseye', 'Pégasus', 'Maximus', 'Álamo'),
+(6, 'Qual filme tem os personagens "Judy Hopps" e "Nick Wilde"?', 'Zootopia', 'Madagascar', 'A Era do Gelo', 'Kung Fu Panda'),
+(6, 'Qual é o nome do panda em "Kung Fu Panda"?', 'Po', 'Shifu', 'Tigresa', 'Mestre Oogway'),
+(6, 'Qual personagem é conhecido como "O Máscara"?', 'Shrek', 'Gato de Botas', 'Burro', 'Lord Farquaad');
+
+db/conexao.php:
+<?php
+$host = "localhost";
+$user = "root";
+$password = "";
+$db = "barelyknow";
+
+$conn = new mysqli($host, $user, $password, $db);
+
+if ($conn->connect_error) {
+    die("Falha na conexão: " . $conn->connect_error);
+}
+
+$conn->set_charset("utf8mb4");
+?>
+
+public/js/index.js:
+class IndexController {
+    constructor() {
+        this.modalTipo = 'criar';
+        this.init();
+    }
+
+    init() {
+        this.configurarModal();
+        this.configurarFormulario();
+    }
+
+    configurarModal() {
+        const modal = document.getElementById('modalSala');
+        
+        modal.addEventListener('shown.bs.modal', () => {
+            setTimeout(() => {
+                const input = this.modalTipo === 'entrar' 
+                    ? document.querySelector('input[name="codigo_sala"]')
+                    : document.querySelector('input[name="nome"]');
+                if (input) input.focus();
+            }, 150);
+        });
+
+        modal.addEventListener('hidden.bs.modal', () => {
+            document.getElementById('formSala').reset();
+            document.querySelectorAll('input, select').forEach(campo => {
+                campo.disabled = false;
+                if (campo.name === 'codigo_sala') {
+                    campo.required = false;
+                }
+            });
+        });
+    }
+
+    abrirModal(tipo) {
+        this.modalTipo = tipo;
+        const modalTitle = document.getElementById('modalTitle');
+        const camposCriar = document.getElementById('camposCriar');
+        const camposEntrar = document.getElementById('camposEntrar');
+        const btnSubmit = document.getElementById('btnSubmit');
+
+        if (tipo === 'criar') {
+            this.configurarModalCriar(modalTitle, camposCriar, camposEntrar, btnSubmit);
+        } else {
+            this.configurarModalEntrar(modalTitle, camposCriar, camposEntrar, btnSubmit);
+        }
+    }
+
+    configurarModalCriar(modalTitle, camposCriar, camposEntrar, btnSubmit) {
+        modalTitle.textContent = 'Criar Sala';
+        camposCriar.style.display = 'block';
+        camposEntrar.style.display = 'none';
+        btnSubmit.textContent = 'Criar Sala';
+        btnSubmit.className = 'btn btn-success-custom btn-custom';
+
+        this.toggleCampos(camposCriar, false);
+        this.toggleCampos(camposEntrar, true);
+    }
+
+    configurarModalEntrar(modalTitle, camposCriar, camposEntrar, btnSubmit) {
+        modalTitle.textContent = 'Entrar em Sala';
+        camposCriar.style.display = 'none';
+        camposEntrar.style.display = 'block';
+        btnSubmit.textContent = 'Entrar na Sala';
+        btnSubmit.className = 'btn btn-primary-custom btn-custom';
+
+        this.toggleCampos(camposEntrar, false);
+        this.toggleCampos(camposCriar, true);
+    }
+
+    toggleCampos(container, desabilitar) {
+        const campos = container.querySelectorAll('input, select');
+        campos.forEach(campo => {
+            campo.disabled = desabilitar;
+            campo.required = !desabilitar;
+        });
+    }
+
+    configurarFormulario() {
+        const form = document.getElementById('formSala');
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            this.enviarFormulario();
+        });
+    }
+
+    async enviarFormulario() {
+        const formData = new FormData(document.getElementById('formSala'));
+        const url = this.modalTipo === 'criar' ? 'view/criar_sala.php' : 'view/entrar_sala.php';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'ok') {
+                this.mostrarSucesso(data.codigo);
+            } else {
+                this.mostrarErro(data.mensagem);
+            }
+        } catch (error) {
+            this.mostrarErro('Não foi possível conectar ao servidor');
+        }
+    }
+
+    mostrarSucesso(codigo) {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalSala'));
+        modal.hide();
+
+        Swal.fire({
+            icon: 'success',
+            title: this.modalTipo === 'criar' ? 'Sala criada!' : 'Entrou na sala!',
+            html: this.modalTipo === 'criar' ? `Sala criada com sucesso!<br><strong>Código: ${codigo}</strong>` : 'Redirecionando...',
+            timer: 2000,
+            showConfirmButton: false,
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            customClass: {
+                popup: 'swal2-dark'
+            }
+        }).then(() => {
+            window.location.href = `view/lobby.php?codigo=${codigo}`;
+        });
+    }
+
+    mostrarErro(mensagem) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: mensagem,
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)',
+            iconColor: 'var(--cor-rosa)'
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.indexController = new IndexController();
+});
+
+public/js/lobby.js:
+class LobbySimples {
+    constructor() {
+        this.init();
+    }
+
+    async init() {
+        console.log('🎮 Lobby iniciado!');
+        this.configurarBotoes();
+        await this.carregarJogadores();
+        this.iniciarAtualizacao();
+    }
+
+    async carregarJogadores() {
+        try {
+            const formData = new FormData();
+            formData.append('acao', 'listar_jogadores');
+            formData.append('codigo', codigoSala);
+
+            const response = await fetch('../utils/lobby_actions.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const resultado = await response.json();
+            
+            if (resultado.status === 'ok') {
+                this.mostrarJogadores(resultado.jogadores);
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+        }
+    }
+
+    async verificarStatusJogo() {
+        if (ehHost) return;
+        
+        try {
+            const formData = new FormData();
+            formData.append('acao', 'verificar_status');
+            formData.append('codigo', codigoSala);
+
+            const response = await fetch('../utils/lobby_actions.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const resultado = await response.json();
+            
+            if (resultado.status === 'iniciada') {
+                console.log('🎯 Jogo iniciado! Redirecionando...');
+                window.location.href = `game.php?codigo=${codigoSala}`;
+            }
+        } catch (error) {
+            console.error('Erro ao verificar status:', error);
+        }
+    }
+
+    mostrarJogadores(jogadores) {
+        console.log('Jogadores recebidos:', jogadores);
+    
+        const container = document.getElementById('listaJogadores');
+        if (!container) return;
+
+        if (!jogadores || jogadores.length === 0) {
+            container.innerHTML = '<div style="color: #c9d0d1; text-align: center; padding: 20px;">😴 Nenhum jogador conectado</div>';
+            return;
+        }
+
+        const jogadoresUnicos = [];
+        const nomesVistos = new Set();
+        
+        jogadores.forEach(jogador => {
+            if (!nomesVistos.has(jogador.nome)) {
+                nomesVistos.add(jogador.nome);
+                jogadoresUnicos.push(jogador);
+            }
+        });
+
+        let html = '';
+        jogadoresUnicos.forEach(jogador => {
+            const ehEu = (jogador.id_jogador == idJogador);
+            const ehHost = (jogador.is_host == 1);
+
+            html += `
+                <div class="jogador-item">
+                    <div class="jogador-nome">
+                        ${ehHost ? '👑' : '👤'} ${jogador.nome}
+                        ${ehEu ? '<span class="badge-vc">Você</span>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+        
+        document.getElementById('contadorJogadores').textContent = jogadoresUnicos.length;
+        
+        if (ehHost) {
+            document.getElementById('btnIniciar').disabled = jogadoresUnicos.length < 2;
+        }
+    }
+
+    configurarBotoes() {
+        if (ehHost) {
+            document.getElementById('btnIniciar').onclick = () => this.iniciarJogo();
+            document.getElementById('btnFechar').onclick = () => this.fecharSala();
+        } else {
+            document.getElementById('btnSair').onclick = () => this.sairSala();
+        }
+    }
+
+    async iniciarJogo() {
+        console.log('🔧 DEBUG: Clicou em iniciar jogo');
+    
+        const resultado = await Swal.fire({
+            title: 'Iniciar jogo?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#33a4e6',
+            cancelButtonColor: '#ff66bc',
+            confirmButtonText: 'Sim, iniciar!',
+            cancelButtonText: 'Cancelar',
+            background: '#1f1e1e',
+            color: 'white'
+        });
+
+        if (resultado.isConfirmed) {
+            console.log('🔧 DEBUG: Confirmou iniciar jogo');
+            
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'iniciar_jogo');
+                formData.append('codigo_sala', codigoSala);
+
+                console.log('🔧 DEBUG: Enviando requisição para:', '../utils/lobby_actions.php');
+                
+                const response = await fetch('../utils/lobby_actions.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('🔧 DEBUG: Resposta recebida, status:', response.status);
+                
+                const data = await response.json();
+                console.log('🔧 DEBUG: Dados da resposta:', data);
+                
+                if (data.status === 'ok') {
+                    console.log('🔧 DEBUG: Jogo iniciado com sucesso, redirecionando...');
+                    Swal.fire({
+                        title: 'Jogo iniciado!',
+                        text: 'Redirecionando...',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false,
+                        background: '#1f1e1e',
+                        color: 'white'
+                    }).then(() => {
+                        window.location.href = `game.php?codigo=${codigoSala}`;
+                    });
+                } else {
+                    console.log('🔧 DEBUG: Erro do servidor:', data.mensagem);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: data.mensagem,
+                        background: '#1f1e1e',
+                        color: 'white'
+                    });
+                }
+            } catch (error) {
+                console.log('🔧 DEBUG: Erro de rede:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro de conexão',
+                    text: 'Não foi possível conectar ao servidor',
+                    background: '#1f1e1e',
+                    color: 'white'
+                });
+            }
+        }
+    }
+
+    async fecharSala() {
+        const resultado = await Swal.fire({
+            title: 'Fechar sala?',
+            text: 'Todos os jogadores serão desconectados',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: 'var(--cor-rosa)',
+            cancelButtonColor: 'var(--cor-azul)',
+            confirmButtonText: 'Sim, fechar!',
+            cancelButtonText: 'Cancelar',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)'
+        });
+
+        if (resultado.isConfirmed) {
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'fechar_sala');
+                formData.append('codigo', codigoSala);
+
+                const response = await fetch('../utils/lobby_actions.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    window.location.href = '../index.php';
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: 'Não foi possível fechar a sala',
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)'
+                });
+            }
+        }
+    }
+
+    async sairSala() {
+        const resultado = await Swal.fire({
+            title: 'Sair da sala?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: 'var(--cor-azul)',
+            cancelButtonColor: 'var(--cor-rosa)',
+            confirmButtonText: 'Sim, sair!',
+            cancelButtonText: 'Cancelar',
+            background: 'var(--cor-fundo2)',
+            color: 'var(--cor-branco)'
+        });
+
+        if (resultado.isConfirmed) {
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'sair_sala');
+                formData.append('codigo', codigoSala);
+
+                const response = await fetch('../utils/lobby_actions.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    window.location.href = '../index.php';
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: 'Não foi possível sair da sala',
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)'
+                });
+            }
+        }
+    }
+
+    iniciarAtualizacao() {
+        setInterval(() => {
+            this.carregarJogadores();
+        }, 2000);
+        
+        if (!ehHost) {
+            setInterval(() => {
+                this.verificarStatusJogo();
+            }, 2000);
+        }
+    }
+}
+
+public/style/index.css:
+@import url(style.css);
+
+.body-index{
+    background-color: var(--cor-fundo);
+    color: var(--cor-branco);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.btn-custom-index{
+    width: 220px;
+    font-size: 1.1rem;
+    margin: 10px 0;
+}
+
+.btn-criar-index{
+    color: var(--cor-branco);
+    background-color: var(--cor-azul2);
+}
+
+.btn-criar-index:hover{
+    background-color: var(--cor-azul);
+}
+
+.btn-entrar-index{
+    color: var(--cor-branco);
+    background-color: var(--cor-rosa2);
+}
+
+.btn-entrar-index:hover{
+    background-color: var(--cor-rosa);
+}
+
+.modal-content-dark{
+    background-color: var(--cor-fundo2);
+    color: var(--cor-branco);
+    border-radius: 12px;
+}
+
+.titulo-index{
+    font-weight: bold;
+    margin-bottom: 0.3em;
+}
+
+.subtitulo-index{
+    font-size: 1.1rem;
+    color: #ccc;
+    margin-bottom: 2em;
+}
+
+.logo-index {
+    max-width: 300px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 1.5rem;
+}
+
+.form-control-dark,
+.form-select-dark {
+    background-color: #2a2a2a !important;
+    border-color: #444 !important;
+    color: var(--cor-branco) !important;
+}
+
+.form-control-dark:focus,
+.form-select-dark:focus {
+    background-color: #333 !important;
+    border-color: var(--cor-azul) !important;
+    color: var(--cor-branco) !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+public/style/lobby.css:
+@import url('style.css');
+
+.lobby-body {
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.lobby-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.lobby-codigo {
+    color: var(--cor-azul);
+    font-size: 2.5em;
+    font-weight: 700;
+    margin: 0;
+}
+
+.lobby-info {
+    color: var(--cor-branco2);
+    font-size: 1.1em;
+    font-weight: 400;
+}
+
+.jogadores-section {
+    background: var(--cor-fundo2);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 2px solid var(--cor-azul);
+}
+
+.jogadores-titulo {
+    color: var(--cor-branco);
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.contador-jogadores {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.lista-jogadores {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.jogador-item {
+    background: var(--cor-fundo);
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--cor-azul2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.jogador-item:hover {
+    border-color: var(--cor-azul);
+    transform: translateY(-1px);
+}
+
+.jogador-nome {
+    color: var(--cor-branco);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.badge-vc {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 0.7em;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.badge-host {
+    background: var(--cor-amarela2);
+    color: var(--cor-fundo);
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 0.7em;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.botoes-lobby {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-lobby { 
+    padding: 12px 25px; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    font-size: 1em; 
+    transition: all 0.2s; 
+}
+
+.btn-lobby:hover {
+     transform: translateY(-2px); 
+}
+
+.btn-iniciar { 
+    background: #fff492; 
+    color: #121212; 
+}
+
+.btn-iniciar:disabled { 
+    background: #666; 
+    cursor: not-allowed; 
+}
+
+.btn-fechar { 
+    background: #ff66bc; 
+    color: white; 
+}
+
+.btn-sair { 
+    background: #33a4e6; 
+    color: white; 
+}
+
+public/style/style.css:
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+:root {
+    --cor-branco: #fdfffe;
+    --cor-branco2: #c9d0d1;
+    --cor-rosa: #ff66bc;
+    --cor-rosa2: #e558cb;
+    --cor-amarela: #fff492;
+    --cor-amarela2: #fdc83a;
+    --cor-azul: #72d9eb;
+    --cor-azul2: #33a4e6;
+    --cor-fundo: #121212;
+    --cor-fundo2: #1f1e1e;
+}
+
+* {
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--cor-fundo);
+    color: var(--cor-branco);
+}
+
+.btn-custom {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.2s;
+}
+
+.btn-custom:hover {
+    transform: translateY(-2px);
+}
+
+.btn-primary-custom {
+    background: var(--cor-azul2);
+    color: var(--cor-branco);
+}
+
+.btn-primary-custom:hover {
+    background: var(--cor-azul);
+}
+
+.btn-secondary-custom {
+    background: var(--cor-rosa2);
+    color: var(--cor-branco);
+}
+
+.btn-secondary-custom:hover {
+    background: var(--cor-rosa);
+}
+
+.btn-success-custom {
+    background: var(--cor-amarela);
+    color: var(--cor-fundo);
+}
+
+.form-control-dark {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: var(--cor-branco);
+}
+
+.form-control-dark:focus {
+    background-color: #333;
+    border-color: var(--cor-azul);
+    color: var(--cor-branco);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.modal-content-dark {
+    background-color: var(--cor-fundo2);
+    color: var(--cor-branco);
+    border-radius: 12px;
+}
+
+.swal2-dark {
+    background: var(--cor-fundo2);
+    color: var(--cor-branco);
+}
+
+utils/categorias.php:
+<?php
+include_once "../db/conexao.php";
+
+if (isset($_GET['action']) && $_GET['action'] === 'getCategorias') {
+    $result = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria");
+    $categorias = [];
+    while ($row = $result->fetch_assoc()) {
+        $categorias[] = $row;
+    }
+    echo json_encode($categorias);
+    exit;
+}
+
+function gerarCodigoSala($conn) {
+    do {
+        $codigo = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+        $check = $conn->query("SELECT * FROM salas WHERE codigo_sala = '$codigo'");
+    } while ($check->num_rows > 0);
+    return $codigo;
+}
+?>
+
+utils/lobby_actions.php:
+<?php
+session_start();
+header("Content-Type: application/json");
+include "../db/conexao.php";
+
+$acao = $_POST['acao'] ?? '';
+$codigo_sala = $_POST['codigo_sala'] ?? '';
+
+if (empty($codigo_sala)) {
+    echo json_encode(["status" => "erro", "mensagem" => "Código não informado"]);
+    exit;
+}
+
+$sql_sala = "SELECT id_sala FROM salas WHERE codigo_sala = ?";
+$stmt_sala = $conn->prepare($sql_sala);
+$stmt_sala->bind_param("s", $codigo_sala);
+$stmt_sala->execute();
+$result_sala = $stmt_sala->get_result();
+
+if ($result_sala->num_rows === 0) {
+    echo json_encode(["status" => "erro", "mensagem" => "Sala não encontrada"]);
+    exit;
+}
+
+$sala = $result_sala->fetch_assoc();
+$id_sala = $sala['id_sala'];
+
+$id_jogador = $_SESSION['id_jogador'] ?? 0;
+$sql_jogador = "SELECT is_host FROM jogadores WHERE id_jogador = ? AND id_sala = ?";
+$stmt_jogador = $conn->prepare($sql_jogador);
+$stmt_jogador->bind_param("ii", $id_jogador, $id_sala);
+$stmt_jogador->execute();
+$result_jogador = $stmt_jogador->get_result();
+
+if ($result_jogador->num_rows === 0) {
+    echo json_encode(["status" => "erro", "mensagem" => "Jogador não encontrado na sala"]);
+    exit;
+}
+
+$jogador = $result_jogador->fetch_assoc();
+$eh_host = ($jogador['is_host'] == 1);
+
+switch ($acao) {
+    case 'listar_jogadores':
+        $sql = "SELECT id_jogador, nome, is_host FROM jogadores 
+                WHERE id_sala = ? 
+                ORDER BY is_host DESC, id_jogador ASC";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $id_sala);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $jogadores = [];
+        while ($row = $result->fetch_assoc()) {
+            $jogadores[] = $row;
+        }
+        
+        echo json_encode(["status" => "ok", "jogadores" => $jogadores]);
+        break;
+
+    case 'iniciar_jogo':
+        if (!$eh_host) {
+            echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode iniciar o jogo"]);
+            exit;
+        } else {
+            $sql_count = "SELECT COUNT(*) as total FROM jogadores WHERE id_sala = ?";
+            $stmt_count = $conn->prepare($sql_count);
+            $stmt_count->bind_param("i", $id_sala);
+            $stmt_count->execute();
+            $result_count = $stmt_count->get_result();
+            $total = $result_count->fetch_assoc()['total'];
+            
+            if ($total < 2) {
+                echo json_encode(["status" => "erro", "mensagem" => "Mínimo 2 jogadores para iniciar"]);
+                exit;
+            } else {
+                $sql_update = "UPDATE salas SET status = 'iniciada' WHERE id_sala = ?";
+                $stmt_update = $conn->prepare($sql_update);
+                $stmt_update->bind_param("i", $id_sala);
+                
+                if ($stmt_update->execute()) {
+                    echo json_encode(["status" => "ok"]);
+                } else {
+                    echo json_encode(["status" => "erro", "mensagem" => "Erro ao iniciar jogo"]);
+                }
+            }
+        }
+        break;
+
+    case 'sair_sala':
+        if ($eh_host) {
+            echo json_encode(["status" => "erro", "mensagem" => "Host deve fechar a sala em vez de sair"]);
+            exit;
+        }
+
+        $sql_delete = "DELETE FROM jogadores WHERE id_jogador = ?";
+        $stmt_delete = $conn->prepare($sql_delete);
+        $stmt_delete->bind_param("i", $id_jogador);
+        
+        if ($stmt_delete->execute()) {
+            session_destroy();
+            echo json_encode(["status" => "ok"]);
+        } else {
+            echo json_encode(["status" => "erro", "mensagem" => "Erro ao sair da sala"]);
+        }
+        break;
+
+    case 'fechar_sala':
+        if (!$eh_host) {
+            echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode fechar a sala"]);
+            exit;
+        }
+
+        $sql_delete = "DELETE FROM salas WHERE id_sala = ?";
+        $stmt_delete = $conn->prepare($sql_delete);
+        $stmt_delete->bind_param("i", $id_sala);
+        
+        if ($stmt_delete->execute()) {
+            session_destroy();
+            echo json_encode(["status" => "ok"]);
+        } else {
+            echo json_encode(["status" => "erro", "mensagem" => "Erro ao fechar sala"]);
+        }
+        break;
+
+    case 'verificar_status':
+        $sql_status = "SELECT status FROM salas WHERE id_sala = ?";
+        $stmt_status = $conn->prepare($sql_status);
+        $stmt_status->bind_param("i", $id_sala);
+        $stmt_status->execute();
+        $result_status = $stmt_status->get_result();
+        
+        if ($result_status->num_rows === 0) {
+            echo json_encode(["status" => "erro", "mensagem" => "Sala não encontrada"]);
+            exit;
+        }
+        
+        $status = $result_status->fetch_assoc();
+        echo json_encode(["status" => $status['status']]);
+        break;
+
+    default:
+        echo json_encode(["status" => "erro", "mensagem" => "Ação desconhecida"]);
+}
+?>
+
+view/criar_sala.php:
+<?php
+session_start();
+require_once '../db/conexao.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nome = trim($_POST['nome']);
+    $categoria = $_POST['categoria'];
+    $rodadas = $_POST['rodadas'];
+    $tempo_resposta = $_POST['tempo_resposta'];
+
+    if (empty($nome)) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Digite seu nome']);
+        exit;
+    }
+
+    if (strlen($nome) > 100) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Nome muito longo']);
+        exit;
+    }
+
+    $codigo_sala = substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
+
+    $conn->begin_transaction();
+
+    try {
+        $stmt = $conn->prepare("INSERT INTO salas (codigo_sala, id_categoria, rodadas, tempo_resposta) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("siii", $codigo_sala, $categoria, $rodadas, $tempo_resposta);
+        $stmt->execute();
+        $id_sala = $conn->insert_id;
+
+        $stmt = $conn->prepare("INSERT INTO jogadores (nome, id_sala, is_host) VALUES (?, ?, 1)");
+        $stmt->bind_param("si", $nome, $id_sala);
+        $stmt->execute();
+        $id_jogador = $conn->insert_id;
+
+        $conn->commit();
+
+        $_SESSION['id_jogador'] = $id_jogador;
+        $_SESSION['nome_jogador'] = $nome;
+        $_SESSION['id_sala'] = $id_sala;
+        $_SESSION['codigo_sala'] = $codigo_sala;
+        $_SESSION['is_host'] = true;
+
+        echo json_encode(['status' => 'ok', 'codigo' => $codigo_sala]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Erro ao criar sala: ' . $e->getMessage()]);
+    }
+}
+?>
+
+view/entrar_sala.php:
+<?php
+session_start();
+require_once '../db/conexao.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nome = trim($_POST['nome']);
+    $codigo_sala = strtoupper(trim($_POST['codigo_sala']));
+
+    if (empty($nome) || empty($codigo_sala)) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Preencha todos os campos']);
+        exit;
+    }
+
+    if (strlen($nome) > 100) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Nome muito longo']);
+        exit;
+    }
+
+    $stmt = $conn->prepare("SELECT id_sala, status FROM salas WHERE codigo_sala = ?");
+    $stmt->bind_param("s", $codigo_sala);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows === 0) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Sala não encontrada']);
+        exit;
+    }
+
+    $sala = $result->fetch_assoc();
+
+    if ($sala['status'] !== 'aberta') {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Esta sala não está mais aberta']);
+        exit;
+    }
+
+    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM jogadores WHERE id_sala = ?");
+    $stmt->bind_param("i", $sala['id_sala']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $total_jogadores = $result->fetch_assoc()['total'];
+
+    if ($total_jogadores >= 8) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Sala lotada (máximo 8 jogadores)']);
+        exit;
+    }
+
+    $stmt = $conn->prepare("INSERT INTO jogadores (nome, id_sala) VALUES (?, ?)");
+    $stmt->bind_param("si", $nome, $sala['id_sala']);
+    
+    if ($stmt->execute()) {
+        $_SESSION['id_jogador'] = $conn->insert_id;
+        $_SESSION['nome_jogador'] = $nome;
+        $_SESSION['id_sala'] = $sala['id_sala'];
+        $_SESSION['codigo_sala'] = $codigo_sala;
+        $_SESSION['is_host'] = false;
+
+        echo json_encode(['status' => 'ok', 'codigo' => $codigo_sala]);
+    } else {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Erro ao entrar na sala']);
+    }
+}
+?>
+
+view/lobby_controller.php:
+<?php
+session_start();
+require_once '../db/conexao.php';
+
+if (!isset($_SESSION['id_jogador']) || !isset($_POST['codigo_sala'])) {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Sessão inválida']);
+    exit;
+}
+
+$acao = $_POST['acao'];
+$codigo_sala = $_POST['codigo_sala'];
+$id_jogador = $_SESSION['id_jogador'];
+
+switch ($acao) {
+    case 'listar_jogadores':
+        listarJogadores($conn, $codigo_sala, $id_jogador);
+        break;
+    case 'iniciar_jogo':
+        iniciarJogo($conn, $codigo_sala, $id_jogador);
+        break;
+    case 'encerrar_sala':
+        encerrarSala($conn, $codigo_sala, $id_jogador);
+        break;
+    case 'sair_sala':
+        sairSala($conn, $id_jogador);
+        break;
+    default:
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Ação inválida']);
+}
+
+function listarJogadores($conn, $codigo_sala, $id_jogador) {
+    $stmt = $conn->prepare("
+        SELECT j.id_jogador, j.nome, j.is_host,
+               (j.id_jogador = ?) as is_vc
+        FROM jogadores j
+        INNER JOIN salas s ON j.id_sala = s.id_sala
+        WHERE s.codigo_sala = ?
+        ORDER BY j.is_host DESC, j.id_jogador ASC
+    ");
+    $stmt->bind_param("is", $id_jogador, $codigo_sala);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $jogadores = [];
+    while ($row = $result->fetch_assoc()) {
+        $jogadores[] = $row;
+    }
+
+    $is_host = false;
+    foreach ($jogadores as $jogador) {
+        if ($jogador['id_jogador'] == $id_jogador && $jogador['is_host']) {
+            $is_host = true;
+            break;
+        }
+    }
+
+    echo json_encode([
+        'status' => 'ok',
+        'jogadores' => $jogadores,
+        'is_host' => $is_host
+    ]);
+}
+
+function iniciarJogo($conn, $codigo_sala, $id_jogador) {
+    $stmt = $conn->prepare("
+        SELECT j.is_host 
+        FROM jogadores j 
+        INNER JOIN salas s ON j.id_sala = s.id_sala 
+        WHERE j.id_jogador = ? AND s.codigo_sala = ?
+    ");
+    $stmt->bind_param("is", $id_jogador, $codigo_sala);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows === 0 || !$result->fetch_assoc()['is_host']) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Apenas o host pode iniciar o jogo']);
+        return;
+    }
+
+    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM jogadores j INNER JOIN salas s ON j.id_sala = s.id_sala WHERE s.codigo_sala = ?");
+    $stmt->bind_param("s", $codigo_sala);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $total_jogadores = $result->fetch_assoc()['total'];
+
+    if ($total_jogadores < 2) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'É necessário pelo menos 2 jogadores para iniciar']);
+        return;
+    }
+
+    $stmt = $conn->prepare("UPDATE salas SET status = 'iniciada' WHERE codigo_sala = ?");
+    $stmt->bind_param("s", $codigo_sala);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['status' => 'ok']);
+    } else {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Erro ao iniciar jogo']);
+    }
+}
+
+function encerrarSala($conn, $codigo_sala, $id_jogador) {
+    $stmt = $conn->prepare("
+        SELECT j.is_host 
+        FROM jogadores j 
+        INNER JOIN salas s ON j.id_sala = s.id_sala 
+        WHERE j.id_jogador = ? AND s.codigo_sala = ?
+    ");
+    $stmt->bind_param("is", $id_jogador, $codigo_sala);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows === 0 || !$result->fetch_assoc()['is_host']) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Apenas o host pode encerrar a sala']);
+        return;
+    }
+
+    $stmt = $conn->prepare("DELETE FROM salas WHERE codigo_sala = ?");
+    $stmt->bind_param("s", $codigo_sala);
+    
+    if ($stmt->execute()) {
+        session_destroy();
+        echo json_encode(['status' => 'ok']);
+    } else {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Erro ao encerrar sala']);
+    }
+}
+
+function sairSala($conn, $id_jogador) {
+    $stmt = $conn->prepare("DELETE FROM jogadores WHERE id_jogador = ?");
+    $stmt->bind_param("i", $id_jogador);
+    
+    if ($stmt->execute()) {
+        session_destroy();
+        echo json_encode(['status' => 'ok']);
+    } else {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Erro ao sair da sala']);
+    }
+}
+?>
+
+view/lobby.php:
+<?php
+session_start();
+include "../db/conexao.php";
+
+$codigo = isset($_GET['codigo']) ? trim($_GET['codigo']) : '';
+
+if (empty($codigo)) {
+    die('
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro</title>
+            <style>
+                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
+                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
+                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="erro">❌ Error: Código da sala não encontrado</div>
+            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
+        </body>
+        </html>
+    ');
+}
+
+// Buscar sala
+$sql = "SELECT s.*, c.nome_categoria 
+        FROM salas s 
+        JOIN categorias c ON s.id_categoria = c.id_categoria 
+        WHERE s.codigo_sala = '$codigo'";
+$result = $conn->query($sql);
+
+if ($result->num_rows === 0) {
+    die('
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro</title>
+            <style>
+                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
+                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
+                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="erro">❌ Sala não encontrada!</div>
+            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
+        </body>
+        </html>
+    ');
+}
+
+$sala = $result->fetch_assoc();
+
+$id_jogador = $_SESSION['id_jogador'] ?? 0;
+$sql_jogador = "SELECT id_jogador, nome, is_host FROM jogadores 
+                WHERE id_sala = {$sala['id_sala']} AND id_jogador = $id_jogador";
+$result_jogador = $conn->query($sql_jogador);
+
+if ($result_jogador->num_rows === 0) {
+    die('
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro</title>
+            <style>
+                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
+                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
+                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="erro">❌ Você não está nesta sala!</div>
+            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
+        </body>
+        </html>
+    ');
+}
+
+$jogador_atual = $result_jogador->fetch_assoc();
+$eh_host = ($jogador_atual['is_host'] == 1);
+?>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lobby - <?= $codigo ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../public/style/lobby.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background: #121212; color: white; font-family: Arial; margin: 0; padding: 20px; }
+        .lobby-header { text-align: center; margin-bottom: 30px; }
+        .lobby-codigo { color: #72d9eb; font-size: 2em; margin: 0; }
+        .lobby-info { color: #c9d0d1; font-size: 1.1em; }
+        .jogadores-section { background: #1f1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #33a4e6; }
+        .jogadores-titulo { color: white; font-size: 1.3em; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .contador-jogadores { background: #ff66bc; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
+        .lista-jogadores { display: flex; flex-direction: column; gap: 8px; }
+        .jogador-item { background: #121212; padding: 12px; border-radius: 8px; border: 1px solid #33a4e6; display: flex; justify-content: space-between; }
+        .jogador-nome { color: white; display: flex; align-items: center; gap: 8px; }
+        .badge-vc { background: #ff66bc; color: white; padding: 2px 6px; border-radius: 8px; font-size: 0.7em; }
+        .badge-host { background: #fdc83a; color: #121212; padding: 2px 6px; border-radius: 8px; font-size: 0.7em; }
+        .botoes-lobby { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn-lobby { padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; transition: all 0.2s; }
+        .btn-lobby:hover { transform: translateY(-2px); }
+        .btn-iniciar { background: #fff492; color: #121212; }
+        .btn-iniciar:disabled { background: #666; cursor: not-allowed; }
+        .btn-fechar { background: #ff66bc; color: white; }
+        .btn-sair { background: #33a4e6; color: white; }
+    </style>
+</head>
+<body>
+    <div class="lobby-header">
+        <h1 class="lobby-codigo">Sala: <?= $codigo ?></h1>
+        <p class="lobby-info">
+            <?= $sala['nome_categoria'] ?> • 
+            <?= $sala['rodadas'] ?> rodadas • 
+            <?= $sala['tempo_resposta'] ?> segundos por pergunta
+        </p>
+        
+        <?php if ($eh_host): ?>
+            <p style="color: #fdc83a;">
+                <i class="bi bi-star-fill"></i> Você é o Host
+            </p>
+        <?php else: ?>
+            <p style="color: #33a4e6;">
+                <i class="bi bi-person"></i> Aguardando host iniciar...
+            </p>
+        <?php endif; ?>
+    </div>
+
+    <div class="jogadores-section">
+        <div class="jogadores-titulo">
+            <i class="bi bi-people"></i> Jogadores
+            <span class="contador-jogadores" id="contadorJogadores">0</span>
+        </div>
+        <div id="listaJogadores" class="lista-jogadores">
+            <div style="color: #c9d0d1; text-align: center;">
+                ✅ Lobby carregado! Buscando jogadores...
+            </div>
+        </div>
+    </div>
+
+    <div class="botoes-lobby">
+        <?php if ($eh_host): ?>
+            <button id="btnIniciar" class="btn-lobby btn-iniciar" disabled>
+                <i class="bi bi-play-circle"></i> Iniciar Jogo
+            </button>
+            <button id="btnFechar" class="btn-lobby btn-fechar">
+                <i class="bi bi-x-circle"></i> Fechar Sala
+            </button>
+        <?php else: ?>
+            <button id="btnSair" class="btn-lobby btn-sair">
+                <i class="bi bi-box-arrow-left"></i> Sair da Sala
+            </button>
+        <?php endif; ?>
+    </div>
+
+    <script>
+        const codigoSala = "<?= $codigo ?>";
+        const ehHost = <?= $eh_host ? 'true' : 'false'; ?>;
+        const idJogador = <?= $jogador_atual['id_jogador']; ?>;
+        const nomeJogador = "<?= $jogador_atual['nome']; ?>";
+    </script>
+
+    <script>
+        class LobbyController {
+            constructor() {
+                this.init();
+            }
+
+            async init() {
+                this.configurarBotoes();
+                await this.carregarJogadores();
+                this.iniciarAtualizacao();
+            }
+
+            async carregarJogadores() {
+                try {
+                    const formData = new FormData();
+                    formData.append('acao', 'listar_jogadores');
+                    formData.append('codigo_sala', codigoSala);
+
+                    const response = await fetch('../utils/lobby_actions.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const resultado = await response.json();
+                    
+                    if (resultado.status === 'ok') {
+                        this.mostrarJogadores(resultado.jogadores);
+                    } else {
+                        console.error('Erro:', resultado.mensagem);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar jogadores:', error);
+                }
+            }
+
+            mostrarJogadores(jogadores) {
+                const container = document.getElementById('listaJogadores');
+                if (!container) return;
+
+                if (!jogadores || jogadores.length === 0) {
+                    container.innerHTML = '<div style="color: #c9d0d1; text-align: center; padding: 20px;">😴 Nenhum jogador conectado</div>';
+                    return;
+                }
+
+                let html = '';
+                jogadores.forEach(jogador => {
+                    const ehEu = (jogador.id_jogador == idJogador);
+                    const ehHostJogador = (jogador.is_host == 1);
+
+                    html += `
+                        <div class="jogador-item">
+                            <div class="jogador-nome">
+                                ${ehHostJogador ? '👑' : '👤'} ${jogador.nome}
+                                ${ehEu ? '<span class="badge-vc">Você</span>' : ''}
+                                ${ehHostJogador ? '<span class="badge-host">Host</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                
+                document.getElementById('contadorJogadores').textContent = jogadores.length;
+                
+                if (ehHost) {
+                    document.getElementById('btnIniciar').disabled = jogadores.length < 2;
+                }
+            }
+
+            configurarBotoes() {
+                if (ehHost) {
+                    document.getElementById('btnIniciar').onclick = () => this.iniciarJogo();
+                    document.getElementById('btnFechar').onclick = () => this.fecharSala();
+                } else {
+                    document.getElementById('btnSair').onclick = () => this.sairSala();
+                    this.verificarStatusJogo();
+                }
+            }
+
+            async iniciarJogo() {
+                const resultado = await Swal.fire({
+                    title: 'Iniciar jogo?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#33a4e6',
+                    cancelButtonColor: '#ff66bc',
+                    confirmButtonText: 'Sim, iniciar!',
+                    cancelButtonText: 'Cancelar',
+                    background: '#1f1e1e',
+                    color: 'white'
+                });
+
+                if (resultado.isConfirmed) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('acao', 'iniciar_jogo');
+                        formData.append('codigo_sala', codigoSala);
+
+                        const response = await fetch('../utils/lobby_actions.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.status === 'ok') {
+                            Swal.fire({
+                                title: 'Jogo iniciado!',
+                                text: 'Redirecionando...',
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false,
+                                background: '#1f1e1e',
+                                color: 'white'
+                            }).then(() => {
+                                window.location.href = `game.php?codigo=${codigoSala}`;
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erro',
+                                text: data.mensagem,
+                                background: '#1f1e1e',
+                                color: 'white'
+                            });
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erro',
+                            text: 'Não foi possível iniciar o jogo',
+                            background: '#1f1e1e',
+                            color: 'white'
+                        });
+                    }
+                }
+            }
+
+            async fecharSala() {
+                const resultado = await Swal.fire({
+                    title: 'Fechar sala?',
+                    text: 'Todos os jogadores serão desconectados',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ff66bc',
+                    cancelButtonColor: '#33a4e6',
+                    confirmButtonText: 'Sim, fechar!',
+                    cancelButtonText: 'Cancelar',
+                    background: '#1f1e1e',
+                    color: 'white'
+                });
+
+                if (resultado.isConfirmed) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('acao', 'fechar_sala');
+                        formData.append('codigo_sala', codigoSala);
+
+                        const response = await fetch('../utils/lobby_actions.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.status === 'ok') {
+                            window.location.href = '../index.php';
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erro',
+                            text: 'Não foi possível fechar a sala',
+                            background: '#1f1e1e',
+                            color: 'white'
+                        });
+                    }
+                }
+            }
+
+            async sairSala() {
+                const resultado = await Swal.fire({
+                    title: 'Sair da sala?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#33a4e6',
+                    cancelButtonColor: '#ff66bc',
+                    confirmButtonText: 'Sim, sair!',
+                    cancelButtonText: 'Cancelar',
+                    background: '#1f1e1e',
+                    color: 'white'
+                });
+
+                if (resultado.isConfirmed) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('acao', 'sair_sala');
+                        formData.append('codigo_sala', codigoSala);
+
+                        const response = await fetch('../utils/lobby_actions.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.status === 'ok') {
+                            window.location.href = '../index.php';
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erro',
+                            text: 'Não foi possível sair da sala',
+                            background: '#1f1e1e',
+                            color: 'white'
+                        });
+                    }
+                }
+            }
+
+            async verificarStatusJogo() {
+                try {
+                    const formData = new FormData();
+                    formData.append('acao', 'verificar_status');
+                    formData.append('codigo_sala', codigoSala);
+
+                    const response = await fetch('../utils/lobby_actions.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const resultado = await response.json();
+                    
+                    if (resultado.status === 'iniciada') {
+                        window.location.href = `game.php?codigo=${codigoSala}`;
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar status:', error);
+                }
+            }
+
+            iniciarAtualizacao() {
+                setInterval(() => {
+                    this.carregarJogadores();
+                }, 3000);
+                
+                if (!ehHost) {
+                    setInterval(() => {
+                        this.verificarStatusJogo();
+                    }, 2000);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new LobbyController();
+        });
+    </script>
+</body>
+</html>
+
+index.php:
+<?php
+session_start();
+include "db/conexao.php";
+$categorias = $conn->query("SELECT * FROM categorias ORDER BY nome_categoria ASC");
+?>
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarelyKnow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="public/style/index.css">
+    <link rel="icon" href="public/img/icon.png">
+</head>
+
+<body class="body-index">
+    <div class="text-center">
+        <img src="public/img/logo-principal.png" alt="Logo BarelyKnow" class="logo-index">
+        <h1 class="titulo-index">BarelyKnow</h1>
+        <p class="subtitulo-index">Hora de colocar os conhecimentos em prática... ou pelo menos a sorte!</p>
+
+        <button class="btn btn-lg btn-custom-index btn-criar-index" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('criar')">
+            <i class="bi bi-plus-circle"></i> Criar Sala
+        </button>
+        <br>
+        <button class="btn btn-lg btn-custom-index btn-entrar-index" data-bs-toggle="modal" data-bs-target="#modalSala" onclick="abrirModal('entrar')">
+            <i class="bi bi-box-arrow-in-right"></i> Entrar em Sala
+        </button>
+    </div>
+
+    <div class="modal fade" id="modalSala" tabindex="-1" aria-labelledby="modalSalaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-content-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Criar Sala</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formSala">
+                        <div class="mb-3">
+                            <label class="form-label">Seu nome:</label>
+                            <input type="text" name="nome" class="form-control form-control-dark" required>
+                        </div>
+
+                        <div id="camposCriar">
+                            <div class="mb-3">
+                                <label class="form-label">Categoria:</label>
+                                <select name="categoria" class="form-select form-select-dark" required>
+                                    <option value="">Selecione uma categoria</option>
+                                    <?php while ($cat = $categorias->fetch_assoc()) { ?>
+                                        <option value="<?= $cat['id_categoria'] ?>">
+                                            <?= htmlspecialchars($cat['nome_categoria']) ?>
+                                        </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Rodadas:</label>
+                                <input type="number" name="rodadas" class="form-control form-control-dark" min="3" max="20" value="3" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Tempo por pergunta:</label>
+                                <select name="tempo_resposta" class="form-select form-select-dark" required>
+                                    <option value="10">10 segundos</option>
+                                    <option value="15" selected>15 segundos</option>
+                                    <option value="20">20 segundos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="camposEntrar" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Código da Sala:</label>
+                                <input type="text" name="codigo_sala" maxlength="6" class="form-control form-control-dark text-uppercase" placeholder="Ex: ABC123">
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success" id="btnSubmit">Criar Sala</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script>
+        let modalTipo = 'criar';
+
+        function abrirModal(tipo) {
+            modalTipo = tipo;
+            const modalTitle = document.getElementById('modalTitle');
+            const camposCriar = document.getElementById('camposCriar');
+            const camposEntrar = document.getElementById('camposEntrar');
+            const btnSubmit = document.getElementById('btnSubmit');
+        
+            if (tipo === 'criar') {
+                modalTitle.textContent = 'Criar Sala';
+                camposCriar.style.display = 'block';
+                camposEntrar.style.display = 'none';
+                btnSubmit.textContent = 'Criar Sala';
+                btnSubmit.className = 'btn btn-success';
+
+                document.querySelectorAll('#camposEntrar input').forEach(campo => {
+                    campo.required = false;
+                });
+                document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
+                    campo.required = true;
+                });
+
+            } else {
+                modalTitle.textContent = 'Entrar em Sala';
+                camposCriar.style.display = 'none';
+                camposEntrar.style.display = 'block';
+                btnSubmit.textContent = 'Entrar na Sala';
+                btnSubmit.className = 'btn btn-primary-custom btn-custom';
+
+                document.querySelectorAll('#camposCriar input, #camposCriar select').forEach(campo => {
+                    campo.required = false;
+                });
+                document.querySelectorAll('#camposEntrar input').forEach(campo => {
+                    campo.required = true;
+                });
+
+                setTimeout(() => {
+                    const inputCodigo = document.querySelector('input[name="codigo_sala"]');
+                    if (inputCodigo) inputCodigo.focus();
+                }, 100);
+            }
+        }
+
+        document.getElementById('modalSala').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('formSala').reset();
+            document.querySelectorAll('input, select').forEach(campo => {
+                campo.required = false;
+            });
+        });
+
+        document.getElementById('formSala').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            const url = modalTipo === 'criar' ? 'view/criar_sala.php' : 'view/entrar_sala.php';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+            
+                const data = await response.json();
+            
+                if (data.status === 'ok') {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalSala'));
+                    modal.hide();
+                
+                    Swal.fire({
+                        icon: 'success',
+                        title: modalTipo === 'criar' ? 'Sala criada!' : 'Entrou na sala!',
+                        html: modalTipo === 'criar' ? `Sala criada com sucesso!<br><strong>Código: ${data.codigo}</strong>` : 'Redirecionando...',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)'
+                    }).then(() => {
+                        window.location.href = `view/lobby.php?codigo=${data.codigo}`;
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: data.mensagem,
+                        background: 'var(--cor-fundo2)',
+                        color: 'var(--cor-branco)'
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro de conexão',
+                    text: 'Não foi possível conectar ao servidor',
+                    background: 'var(--cor-fundo2)',
+                    color: 'var(--cor-branco)'
+                });
+            }
+        });     
+    </script>
+</body>
+</html>
