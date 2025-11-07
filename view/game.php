@@ -38,18 +38,6 @@ if ($result->num_rows === 0) {
     header("Location: ../index.php");
     exit;
 }
-
-$stmt = $conn->prepare("SELECT COUNT(*) as respondidas FROM respostas WHERE id_jogador = ?");
-$stmt->bind_param("i", $id_jogador);
-$stmt->execute();
-$result = $stmt->get_result();
-$progresso = $result->fetch_assoc();
-$pergunta_atual = $progresso['respondidas'] + 1;
-
-if ($pergunta_atual > $sala['rodadas']) {
-    header("Location: ranking.php?codigo=" . $codigo);
-    exit;
-}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -69,7 +57,7 @@ if ($pergunta_atual > $sala['rodadas']) {
                 <span class="categoria"><?= $sala['nome_categoria'] ?></span>
             </div>
             <div class="progresso">
-                <span class="pergunta-atual">Pergunta <?= $pergunta_atual ?>/<?= $sala['rodadas'] ?></span>
+                <span class="pergunta-atual" id="perguntaAtual">Carregando...</span>
             </div>
             <div class="player-info">
                 <span class="nome-jogador"><?= htmlspecialchars($nome_jogador) ?></span>
@@ -77,19 +65,19 @@ if ($pergunta_atual > $sala['rodadas']) {
         </div>
 
         <div class="pergunta-area">
-            <div class="pergunta-box" id="perguntaBox">
+            <div class="pergunta-box">
                 <p class="pergunta-texto" id="perguntaTexto">Carregando pergunta...</p>
             </div>
             
             <div class="temporizador-container">
-                <div class="temporizador" id="temporizador">
+                <div class="temporizador">
                     <div class="tempo-bar" id="tempoBar"></div>
-                    <span class="tempo-texto" id="tempoTexto"><?= $sala['tempo_resposta'] ?>s</span>
+                    <span class="tempo-texto" id="tempoTexto">0s</span>
                 </div>
             </div>
         </div>
 
-        <div class="alternativas-container" id="alternativasContainer">
+        <div class="alternativas-container">
             <div class="row g-3">
                 <div class="col-md-6">
                     <button class="btn-alternativa" data-alternativa="1" onclick="responder(1)">
@@ -119,11 +107,11 @@ if ($pergunta_atual > $sala['rodadas']) {
         </div>
 
         <div class="feedback-container" id="feedbackContainer" style="display: none;">
-            <div class="feedback-box" id="feedbackBox">
+            <div class="feedback-box">
                 <h3 id="feedbackTitulo"></h3>
                 <p id="feedbackTexto"></p>
-                <div class="proxima-pergunta" id="proximaPergunta">
-                    Próxima pergunta em <span id="contadorProxima">5</span>s
+                <div class="proxima-pergunta">
+                    Aguardando próxima pergunta...
                 </div>
             </div>
         </div>
@@ -132,24 +120,25 @@ if ($pergunta_atual > $sala['rodadas']) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const codigoSala = "<?= $codigo ?>";
-        const tempoTotal = <?= $sala['tempo_resposta'] ?>;
         const idJogador = <?= $id_jogador ?>;
-        const perguntaAtual = <?= $pergunta_atual ?>;
-        const totalRodadas = <?= $sala['rodadas'] ?>;
-
-        let tempoRestante = tempoTotal;
-        let temporizadorInterval;
-        let perguntaAtualData = null;
+        
+        let tempoRestante = 0;
+        let tempoTotal = 0;
+        let temporizadorInterval = null;
         let respostaEnviada = false;
-
+        let perguntaAtualData = null;
+        let momentoClique = 0;
+        
         async function carregarPergunta() {
             try {
+                const formData = new FormData();
+                formData.append('acao', 'carregar_pergunta');
+                formData.append('codigo_sala', codigoSala);
+                formData.append('id_jogador', idJogador);
+
                 const response = await fetch('../utils/game_logic.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `acao=carregar_pergunta&codigo_sala=${codigoSala}&id_jogador=${idJogador}`
+                    body: formData
                 });
                 
                 const data = await response.json();
@@ -157,12 +146,15 @@ if ($pergunta_atual > $sala['rodadas']) {
                 if (data.status === 'ok') {
                     perguntaAtualData = data.pergunta;
                     exibirPergunta(data.pergunta);
-                    iniciarTemporizador();
+                    iniciarTemporizador(data.pergunta.tempo_restante);
                 } else if (data.status === 'fim') {
                     window.location.href = 'ranking.php?codigo=' + codigoSala;
+                } else if (data.status === 'aguardando') {
+                    setTimeout(carregarPergunta, 1000);
                 }
             } catch (error) {
-                console.error('Erro ao carregar pergunta:', error);
+                console.error('Erro:', error);
+                setTimeout(carregarPergunta, 2000);
             }
         }
 
@@ -172,42 +164,47 @@ if ($pergunta_atual > $sala['rodadas']) {
             document.getElementById('alt2').textContent = pergunta.alternativas[1];
             document.getElementById('alt3').textContent = pergunta.alternativas[2];
             document.getElementById('alt4').textContent = pergunta.alternativas[3];
-            
-            document.querySelector('.pergunta-atual').textContent = `Pergunta ${pergunta.numero}/${totalRodadas}`;
+            document.getElementById('perguntaAtual').textContent = `Pergunta ${pergunta.numero}/${pergunta.total}`;
             
             document.querySelectorAll('.btn-alternativa').forEach(btn => {
                 btn.disabled = false;
                 btn.classList.remove('correta', 'incorreta', 'selecionada');
             });
             
-            respostaEnviada = false;
+            if (pergunta.ja_respondeu) {
+                document.querySelectorAll('.btn-alternativa').forEach(btn => btn.disabled = true);
+            }
+            
+            respostaEnviada = pergunta.ja_respondeu;
         }
 
-        function iniciarTemporizador() {
-            tempoRestante = tempoTotal;
+        function iniciarTemporizador(tempoInicial) {
+            tempoRestante = tempoInicial;
+            tempoTotal = tempoInicial;
             atualizarTemporizador();
             
-            clearInterval(temporizadorInterval);
+            if (temporizadorInterval) clearInterval(temporizadorInterval);
+            
             temporizadorInterval = setInterval(() => {
-                tempoRestante--;
-                atualizarTemporizador();
+                tempoRestante -= 0.1;
                 
                 if (tempoRestante <= 0) {
+                    tempoRestante = 0;
                     clearInterval(temporizadorInterval);
-                    if (!respostaEnviada) {
-                        responder(0);
-                    }
+                    if (!respostaEnviada) responder(0);
                 }
-            }, 1000);
+                
+                atualizarTemporizador();
+            }, 100);
         }
 
         function atualizarTemporizador() {
             const tempoBar = document.getElementById('tempoBar');
             const tempoTexto = document.getElementById('tempoTexto');
-            
             const porcentagem = (tempoRestante / tempoTotal) * 100;
+            
             tempoBar.style.width = porcentagem + '%';
-            tempoTexto.textContent = tempoRestante + 's';
+            tempoTexto.textContent = Math.ceil(tempoRestante) + 's';
             
             if (porcentagem <= 25) {
                 tempoBar.style.backgroundColor = 'var(--cor-rosa)';
@@ -220,46 +217,74 @@ if ($pergunta_atual > $sala['rodadas']) {
 
         async function responder(alternativaEscolhida) {
             if (respostaEnviada) return;
-            
             respostaEnviada = true;
+            momentoClique = tempoTotal - tempoRestante;
             clearInterval(temporizadorInterval);
             
-            document.querySelectorAll('.btn-alternativa').forEach(btn => {
-                btn.disabled = true;
-            });
+            document.querySelectorAll('.btn-alternativa').forEach(btn => btn.disabled = true);
             
             if (alternativaEscolhida > 0) {
-                const btnSelecionado = document.querySelector(`[data-alternativa="${alternativaEscolhida}"]`);
-                btnSelecionado.classList.add('selecionada');
+                document.querySelector(`[data-alternativa="${alternativaEscolhida}"]`).classList.add('selecionada');
             }
 
             try {
+                const formData = new FormData();
+                formData.append('acao', 'responder');
+                formData.append('codigo_sala', codigoSala);
+                formData.append('id_jogador', idJogador);
+                formData.append('alternativa', alternativaEscolhida);
+                formData.append('tempo_clique', Math.floor(momentoClique));
+
+                await fetch('../utils/game_logic.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                aguardarFimTempo();
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        }
+
+        function aguardarFimTempo() {
+            const checkInterval = setInterval(() => {
+                if (tempoRestante <= 0) {
+                    clearInterval(checkInterval);
+                    mostrarResultado();
+                }
+            }, 100);
+        }
+
+        async function mostrarResultado() {
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'verificar_resultado');
+                formData.append('codigo_sala', codigoSala);
+                formData.append('id_jogador', idJogador);
+
                 const response = await fetch('../utils/game_logic.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `acao=responder&codigo_sala=${codigoSala}&id_jogador=${idJogador}&alternativa=${alternativaEscolhida}&tempo_restante=${tempoRestante}`
+                    body: formData
                 });
                 
                 const data = await response.json();
-                mostrarFeedback(data);
-                
+                if (data.status === 'ok') mostrarFeedback(data);
             } catch (error) {
-                console.error('Erro ao enviar resposta:', error);
+                console.error('Erro:', error);
             }
         }
 
         function mostrarFeedback(data) {
             const feedbackContainer = document.getElementById('feedbackContainer');
-            const feedbackBox = document.getElementById('feedbackBox');
             const feedbackTitulo = document.getElementById('feedbackTitulo');
             const feedbackTexto = document.getElementById('feedbackTexto');
-            const alternativasContainer = document.getElementById('alternativasContainer');
 
-            if (perguntaAtualData && data.resposta_correta > 0) {
-                const btnCorreta = document.querySelector(`[data-alternativa="${data.resposta_correta}"]`);
-                btnCorreta.classList.add('correta');
+            if (data.resposta_correta > 0) {
+                document.querySelector(`[data-alternativa="${data.resposta_correta}"]`).classList.add('correta');
+            }
+
+            if (!data.acertou && data.alternativa_escolhida > 0) {
+                document.querySelector(`[data-alternativa="${data.alternativa_escolhida}"]`).classList.add('incorreta');
             }
 
             if (data.acertou) {
@@ -278,27 +303,33 @@ if ($pergunta_atual > $sala['rodadas']) {
             }
 
             feedbackContainer.style.display = 'block';
-            alternativasContainer.style.opacity = '0.6';
-
-            let contador = 5;
-            const contadorElement = document.getElementById('contadorProxima');
-            
-            const contadorInterval = setInterval(() => {
-                contador--;
-                contadorElement.textContent = contador;
-                
-                if (contador <= 0) {
-                    clearInterval(contadorInterval);
-                    avancarPergunta();
-                }
-            }, 1000);
+            setTimeout(verificarProximaPergunta, 2000);
         }
 
-        function avancarPergunta() {
-            if (perguntaAtual >= totalRodadas) {
-                window.location.href = 'ranking.php?codigo=' + codigoSala;
-            } else {
-                window.location.reload();
+        async function verificarProximaPergunta() {
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'carregar_pergunta');
+                formData.append('codigo_sala', codigoSala);
+                formData.append('id_jogador', idJogador);
+
+                const response = await fetch('../utils/game_logic.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok' && data.pergunta.numero != perguntaAtualData.numero) {
+                    window.location.reload();
+                } else if (data.status === 'fim') {
+                    window.location.href = 'ranking.php?codigo=' + codigoSala;
+                } else {
+                    setTimeout(verificarProximaPergunta, 2000);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                setTimeout(verificarProximaPergunta, 2000);
             }
         }
 

@@ -21,8 +21,6 @@ if ($result->num_rows === 0) {
 
 $sala = $result->fetch_assoc();
 
-$id_jogador = $_SESSION['id_jogador'] ?? 0;
-
 $stmt = $conn->prepare("
     SELECT j.nome, j.pontos, j.is_host 
     FROM jogadores j 
@@ -102,12 +100,6 @@ $stmt->execute();
             <button class="btn btn-voltar-inicio" onclick="window.location.href='../index.php'">
                 <i class="bi bi-house"></i> Voltar ao Início
             </button>
-            
-            <?php if ($_SESSION['is_host'] ?? false): ?>
-                <button class="btn btn-nova-sala" onclick="window.location.href='../index.php'">
-                    <i class="bi bi-plus-circle"></i> Criar Nova Sala
-                </button>
-            <?php endif; ?>
         </div>
 
         <div class="footer-ranking">
