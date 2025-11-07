@@ -1,142 +1,174 @@
 @import url('style.css');
 
-.lobby-body {
+body {
+    background: var(--cor-fundo);
+    color: var(--cor-branco);
     min-height: 100vh;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
     padding: 20px;
 }
 
-.lobby-header {
+.header {
     text-align: center;
     margin-bottom: 30px;
 }
 
-.lobby-codigo {
+.codigo-sala {
     color: var(--cor-azul);
     font-size: 2.5em;
+    margin: 10px 0;
     font-weight: 700;
-    margin: 0;
 }
 
-.lobby-info {
+.info {
     color: var(--cor-branco2);
     font-size: 1.1em;
-    font-weight: 400;
-}
-
-.jogadores-section {
-    background: var(--cor-fundo2);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    border: 2px solid var(--cor-azul);
-}
-
-.jogadores-titulo {
-    color: var(--cor-branco);
-    font-size: 1.3em;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-}
-
-.contador-jogadores {
-    background: var(--cor-rosa);
-    color: var(--cor-branco);
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.8em;
-    font-weight: 500;
-}
-
-.lista-jogadores {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.jogador-item {
-    background: var(--cor-fundo);
-    padding: 12px 15px;
-    border-radius: 8px;
-    border: 1px solid var(--cor-azul2);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.2s;
-}
-
-.jogador-item:hover {
-    border-color: var(--cor-azul);
-    transform: translateY(-1px);
-}
-
-.jogador-nome {
-    color: var(--cor-branco);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 500;
-}
-
-.badge-vc {
-    background: var(--cor-rosa);
-    color: var(--cor-branco);
-    padding: 2px 8px;
-    border-radius: 8px;
-    font-size: 0.7em;
-    font-weight: 500;
-    margin-left: 8px;
 }
 
 .badge-host {
     background: var(--cor-amarela2);
     color: var(--cor-fundo);
-    padding: 2px 8px;
-    border-radius: 8px;
-    font-size: 0.7em;
-    font-weight: 500;
-    margin-left: 8px;
+    padding: 8px 15px;
+    border-radius: 20px;
+    display: inline-block;
+    margin: 10px 0;
+    font-weight: 600;
 }
 
-.botoes-lobby {
+.badge-player {
+    background: var(--cor-azul2);
+    color: var(--cor-branco);
+    padding: 8px 15px;
+    border-radius: 20px;
+    display: inline-block;
+    margin: 10px 0;
+    font-weight: 600;
+}
+
+.jogadores-box {
+    background: var(--cor-fundo2);
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid var(--cor-azul2);
+    margin-bottom: 20px;
+}
+
+.jogadores-titulo {
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--cor-branco);
+    font-weight: 600;
+}
+
+.contador {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.jogador {
+    background: var(--cor-fundo);
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    border: 1px solid var(--cor-azul2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+    color: var(--cor-branco);
+}
+
+.jogador:hover {
+    border-color: var(--cor-azul);
+    transform: translateY(-1px);
+}
+
+.badge-vc {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 0.8em;
+    margin-left: auto;
+    font-weight: 500;
+}
+
+.botoes {
     display: flex;
     gap: 15px;
     justify-content: center;
     flex-wrap: wrap;
 }
 
-.btn-lobby { 
-    padding: 12px 25px; 
-    border: none; 
-    border-radius: 8px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    font-size: 1em; 
-    transition: all 0.2s; 
+.btn {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
 }
 
-.btn-lobby:hover {
-     transform: translateY(-2px); 
+.btn:hover {
+    transform: translateY(-2px);
 }
 
-.btn-iniciar { 
-    background: #fff492; 
-    color: #121212; 
+.btn-iniciar {
+    background: var(--cor-amarela) !important;
+    color: var(--cor-fundo) !important;
+    border: none !important;
 }
 
-.btn-iniciar:disabled { 
-    background: #666; 
-    cursor: not-allowed; 
+.btn-iniciar:disabled {
+    background: #666 !important;
+    cursor: not-allowed;
+    opacity: 0.5;
+    transform: none;
 }
 
-.btn-fechar { 
-    background: #ff66bc; 
-    color: white; 
+.btn-iniciar:disabled:hover {
+    transform: none;
 }
 
-.btn-sair { 
-    background: #33a4e6; 
-    color: white; 
+.btn-fechar {
+    background: var(--cor-rosa) !important;
+    color: var(--cor-branco) !important;
+    border: none !important;
+}
+
+.btn-sair {
+    background: var(--cor-azul2) !important;
+    color: var(--cor-branco) !important;
+    border: none !important;
+}
+
+@media (max-width: 768px) {
+    .codigo-sala {
+        font-size: 2em;
+    }
+
+    .info {
+        font-size: 1em;
+    }
+
+    .jogadores-box {
+        padding: 15px;
+    }
+
+    .btn {
+        padding: 12px 20px;
+        font-size: 0.9em;
+    }
 }

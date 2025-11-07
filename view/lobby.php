@@ -2,83 +2,39 @@
 session_start();
 include "../db/conexao.php";
 
-$codigo = isset($_GET['codigo']) ? trim($_GET['codigo']) : '';
+$codigo = $_GET['codigo'] ?? '';
 
 if (empty($codigo)) {
-    die('
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Erro</title>
-            <style>
-                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
-                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
-                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
-            </style>
-        </head>
-        <body>
-            <div class="erro">❌ Error: Código da sala não encontrado</div>
-            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
-        </body>
-        </html>
-    ');
+    die('<script>alert("Código da sala não encontrado"); window.location.href="../index.php";</script>');
 }
 
-// Buscar sala
-$sql = "SELECT s.*, c.nome_categoria 
-        FROM salas s 
-        JOIN categorias c ON s.id_categoria = c.id_categoria 
-        WHERE s.codigo_sala = '$codigo'";
-$result = $conn->query($sql);
+$stmt = $conn->prepare("SELECT s.*, c.nome_categoria FROM salas s JOIN categorias c ON s.id_categoria = c.id_categoria WHERE s.codigo_sala = ?");
+$stmt->bind_param("s", $codigo);
+$stmt->execute();
+$result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    die('
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Erro</title>
-            <style>
-                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
-                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
-                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
-            </style>
-        </head>
-        <body>
-            <div class="erro">❌ Sala não encontrada!</div>
-            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
-        </body>
-        </html>
-    ');
+    die('<script>alert("Sala não encontrada"); window.location.href="../index.php";</script>');
 }
 
 $sala = $result->fetch_assoc();
 
 $id_jogador = $_SESSION['id_jogador'] ?? 0;
-$sql_jogador = "SELECT id_jogador, nome, is_host FROM jogadores 
-                WHERE id_sala = {$sala['id_sala']} AND id_jogador = $id_jogador";
-$result_jogador = $conn->query($sql_jogador);
 
-if ($result_jogador->num_rows === 0) {
-    die('
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Erro</title>
-            <style>
-                body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 50px; }
-                .erro { color: #ff4444; font-size: 24px; margin: 20px; }
-                .btn { background: #33a4e6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
-            </style>
-        </head>
-        <body>
-            <div class="erro">❌ Você não está nesta sala!</div>
-            <p><a href="../index.php" class="btn">Voltar para Início</a></p>
-        </body>
-        </html>
-    ');
+if ($id_jogador == 0) {
+    die('<script>alert("Você não está nesta sala"); window.location.href="../index.php";</script>');
 }
 
-$jogador_atual = $result_jogador->fetch_assoc();
+$stmt = $conn->prepare("SELECT nome, is_host FROM jogadores WHERE id_jogador = ? AND id_sala = ?");
+$stmt->bind_param("ii", $id_jogador, $sala['id_sala']);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+    die('<script>alert("Você não está nesta sala"); window.location.href="../index.php";</script>');
+}
+
+$jogador_atual = $result->fetch_assoc();
 $eh_host = ($jogador_atual['is_host'] == 1);
 ?>
 <!DOCTYPE html>
@@ -87,101 +43,130 @@ $eh_host = ($jogador_atual['is_host'] == 1);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lobby - <?= $codigo ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="../public/style/lobby.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        body { background: #121212; color: white; font-family: Arial; margin: 0; padding: 20px; }
-        .lobby-header { text-align: center; margin-bottom: 30px; }
-        .lobby-codigo { color: #72d9eb; font-size: 2em; margin: 0; }
-        .lobby-info { color: #c9d0d1; font-size: 1.1em; }
-        .jogadores-section { background: #1f1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #33a4e6; }
-        .jogadores-titulo { color: white; font-size: 1.3em; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .contador-jogadores { background: #ff66bc; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
-        .lista-jogadores { display: flex; flex-direction: column; gap: 8px; }
-        .jogador-item { background: #121212; padding: 12px; border-radius: 8px; border: 1px solid #33a4e6; display: flex; justify-content: space-between; }
-        .jogador-nome { color: white; display: flex; align-items: center; gap: 8px; }
-        .badge-vc { background: #ff66bc; color: white; padding: 2px 6px; border-radius: 8px; font-size: 0.7em; }
-        .badge-host { background: #fdc83a; color: #121212; padding: 2px 6px; border-radius: 8px; font-size: 0.7em; }
-        .botoes-lobby { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
-        .btn-lobby { padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; transition: all 0.2s; }
-        .btn-lobby:hover { transform: translateY(-2px); }
-        .btn-iniciar { background: #fff492; color: #121212; }
-        .btn-iniciar:disabled { background: #666; cursor: not-allowed; }
-        .btn-fechar { background: #ff66bc; color: white; }
-        .btn-sair { background: #33a4e6; color: white; }
-    </style>
 </head>
 <body>
-    <div class="lobby-header">
-        <h1 class="lobby-codigo">Sala: <?= $codigo ?></h1>
-        <p class="lobby-info">
-            <?= $sala['nome_categoria'] ?> • 
-            <?= $sala['rodadas'] ?> rodadas • 
-            <?= $sala['tempo_resposta'] ?> segundos por pergunta
-        </p>
-        
-        <?php if ($eh_host): ?>
-            <p style="color: #fdc83a;">
-                <i class="bi bi-star-fill"></i> Você é o Host
+    <div class="container">
+        <div class="header">
+            <h1 class="codigo-sala">Sala: <?= $codigo ?></h1>
+            <p class="info">
+                <?= $sala['nome_categoria'] ?> • 
+                <?= $sala['rodadas'] ?> rodadas • 
+                <?= $sala['tempo_resposta'] ?> segundos
             </p>
-        <?php else: ?>
-            <p style="color: #33a4e6;">
-                <i class="bi bi-person"></i> Aguardando host iniciar...
-            </p>
-        <?php endif; ?>
-    </div>
-
-    <div class="jogadores-section">
-        <div class="jogadores-titulo">
-            <i class="bi bi-people"></i> Jogadores
-            <span class="contador-jogadores" id="contadorJogadores">0</span>
+            
+            <?php if ($eh_host): ?>
+                <span class="badge-host">👑 Você é o Host</span>
+            <?php else: ?>
+                <span class="badge-player">🎮 Aguardando host iniciar...</span>
+            <?php endif; ?>
         </div>
-        <div id="listaJogadores" class="lista-jogadores">
-            <div style="color: #c9d0d1; text-align: center;">
-                ✅ Lobby carregado! Buscando jogadores...
+
+        <div class="jogadores-box">
+            <div class="jogadores-titulo">
+                <i class="bi bi-people"></i> Jogadores
+                <span class="contador" id="contador">0</span>
+            </div>
+            <div id="listaJogadores">
+                <p style="text-align: center; color: #c9d0d1;">Carregando jogadores...</p>
             </div>
         </div>
+
+        <div class="botoes">
+            <?php if ($eh_host): ?>
+                <button class="btn btn-iniciar" id="btnIniciar" disabled>
+                    <i class="bi bi-play-circle"></i> Iniciar Jogo
+                </button>
+                <button class="btn btn-fechar" id="btnFechar">
+                    <i class="bi bi-x-circle"></i> Fechar Sala
+                </button>
+            <?php else: ?>
+                <button class="btn btn-sair" id="btnSair">
+                    <i class="bi bi-box-arrow-left"></i> Sair da Sala
+                </button>
+            <?php endif; ?>
+        </div>
     </div>
 
-    <div class="botoes-lobby">
-        <?php if ($eh_host): ?>
-            <button id="btnIniciar" class="btn-lobby btn-iniciar" disabled>
-                <i class="bi bi-play-circle"></i> Iniciar Jogo
-            </button>
-            <button id="btnFechar" class="btn-lobby btn-fechar">
-                <i class="bi bi-x-circle"></i> Fechar Sala
-            </button>
-        <?php else: ?>
-            <button id="btnSair" class="btn-lobby btn-sair">
-                <i class="bi bi-box-arrow-left"></i> Sair da Sala
-            </button>
-        <?php endif; ?>
-    </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const codigoSala = "<?= $codigo ?>";
-        const ehHost = <?= $eh_host ? 'true' : 'false'; ?>;
-        const idJogador = <?= $jogador_atual['id_jogador']; ?>;
-        const nomeJogador = "<?= $jogador_atual['nome']; ?>";
-    </script>
+        const ehHost = <?= $eh_host ? 'true' : 'false' ?>;
+        const idJogador = <?= $id_jogador ?>;
 
-    <script>
-        class LobbyController {
-            constructor() {
-                this.init();
+        async function carregarJogadores() {
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'listar_jogadores');
+                formData.append('codigo_sala', codigoSala);
+
+                const response = await fetch('../utils/lobby_actions.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    mostrarJogadores(data.jogadores);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar jogadores:', error);
+            }
+        }
+
+        function mostrarJogadores(jogadores) {
+            const lista = document.getElementById('listaJogadores');
+            const contador = document.getElementById('contador');
+            
+            if (!jogadores || jogadores.length === 0) {
+                lista.innerHTML = '<p style="text-align: center; color: #c9d0d1;">Nenhum jogador na sala</p>';
+                contador.textContent = '0';
+                return;
             }
 
-            async init() {
-                this.configurarBotoes();
-                await this.carregarJogadores();
-                this.iniciarAtualizacao();
-            }
+            let html = '';
+            jogadores.forEach(jogador => {
+                const ehEu = (jogador.id_jogador == idJogador);
+                const ehHostJogador = (jogador.is_host == 1);
+                
+                html += `
+                    <div class="jogador">
+                        ${ehHostJogador ? '👑' : '🎮'} ${jogador.nome}
+                        ${ehEu ? '<span class="badge-vc">Você</span>' : ''}
+                    </div>
+                `;
+            });
 
-            async carregarJogadores() {
+            lista.innerHTML = html;
+            contador.textContent = jogadores.length;
+
+            if (ehHost) {
+                document.getElementById('btnIniciar').disabled = jogadores.length < 2;
+            }
+        }
+
+        async function iniciarJogo() {
+            const result = await Swal.fire({
+                title: 'Iniciar jogo?',
+                text: 'Todos os jogadores serão redirecionados',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#33a4e6',
+                cancelButtonColor: '#ff66bc',
+                confirmButtonText: 'Sim, iniciar!',
+                cancelButtonText: 'Cancelar',
+                background: '#1f1e1e',
+                color: 'white'
+            });
+
+            if (result.isConfirmed) {
                 try {
                     const formData = new FormData();
-                    formData.append('acao', 'listar_jogadores');
+                    formData.append('acao', 'iniciar_jogo');
                     formData.append('codigo_sala', codigoSala);
 
                     const response = await fetch('../utils/lobby_actions.php', {
@@ -189,241 +174,160 @@ $eh_host = ($jogador_atual['is_host'] == 1);
                         body: formData
                     });
                     
-                    const resultado = await response.json();
+                    const data = await response.json();
                     
-                    if (resultado.status === 'ok') {
-                        this.mostrarJogadores(resultado.jogadores);
+                    if (data.status === 'ok') {
+                        Swal.fire({
+                            title: 'Jogo iniciado!',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false,
+                            background: '#1f1e1e',
+                            color: 'white'
+                        }).then(() => {
+                            window.location.href = `game.php?codigo=${codigoSala}`;
+                        });
                     } else {
-                        console.error('Erro:', resultado.mensagem);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erro',
+                            text: data.mensagem,
+                            background: '#1f1e1e',
+                            color: 'white'
+                        });
                     }
                 } catch (error) {
-                    console.error('Erro ao carregar jogadores:', error);
-                }
-            }
-
-            mostrarJogadores(jogadores) {
-                const container = document.getElementById('listaJogadores');
-                if (!container) return;
-
-                if (!jogadores || jogadores.length === 0) {
-                    container.innerHTML = '<div style="color: #c9d0d1; text-align: center; padding: 20px;">😴 Nenhum jogador conectado</div>';
-                    return;
-                }
-
-                let html = '';
-                jogadores.forEach(jogador => {
-                    const ehEu = (jogador.id_jogador == idJogador);
-                    const ehHostJogador = (jogador.is_host == 1);
-
-                    html += `
-                        <div class="jogador-item">
-                            <div class="jogador-nome">
-                                ${ehHostJogador ? '👑' : '👤'} ${jogador.nome}
-                                ${ehEu ? '<span class="badge-vc">Você</span>' : ''}
-                                ${ehHostJogador ? '<span class="badge-host">Host</span>' : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-
-                container.innerHTML = html;
-                
-                document.getElementById('contadorJogadores').textContent = jogadores.length;
-                
-                if (ehHost) {
-                    document.getElementById('btnIniciar').disabled = jogadores.length < 2;
-                }
-            }
-
-            configurarBotoes() {
-                if (ehHost) {
-                    document.getElementById('btnIniciar').onclick = () => this.iniciarJogo();
-                    document.getElementById('btnFechar').onclick = () => this.fecharSala();
-                } else {
-                    document.getElementById('btnSair').onclick = () => this.sairSala();
-                    this.verificarStatusJogo();
-                }
-            }
-
-            async iniciarJogo() {
-                const resultado = await Swal.fire({
-                    title: 'Iniciar jogo?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#33a4e6',
-                    cancelButtonColor: '#ff66bc',
-                    confirmButtonText: 'Sim, iniciar!',
-                    cancelButtonText: 'Cancelar',
-                    background: '#1f1e1e',
-                    color: 'white'
-                });
-
-                if (resultado.isConfirmed) {
-                    try {
-                        const formData = new FormData();
-                        formData.append('acao', 'iniciar_jogo');
-                        formData.append('codigo_sala', codigoSala);
-
-                        const response = await fetch('../utils/lobby_actions.php', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.status === 'ok') {
-                            Swal.fire({
-                                title: 'Jogo iniciado!',
-                                text: 'Redirecionando...',
-                                icon: 'success',
-                                timer: 1500,
-                                showConfirmButton: false,
-                                background: '#1f1e1e',
-                                color: 'white'
-                            }).then(() => {
-                                window.location.href = `game.php?codigo=${codigoSala}`;
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Erro',
-                                text: data.mensagem,
-                                background: '#1f1e1e',
-                                color: 'white'
-                            });
-                        }
-                    } catch (error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Erro',
-                            text: 'Não foi possível iniciar o jogo',
-                            background: '#1f1e1e',
-                            color: 'white'
-                        });
-                    }
-                }
-            }
-
-            async fecharSala() {
-                const resultado = await Swal.fire({
-                    title: 'Fechar sala?',
-                    text: 'Todos os jogadores serão desconectados',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ff66bc',
-                    cancelButtonColor: '#33a4e6',
-                    confirmButtonText: 'Sim, fechar!',
-                    cancelButtonText: 'Cancelar',
-                    background: '#1f1e1e',
-                    color: 'white'
-                });
-
-                if (resultado.isConfirmed) {
-                    try {
-                        const formData = new FormData();
-                        formData.append('acao', 'fechar_sala');
-                        formData.append('codigo_sala', codigoSala);
-
-                        const response = await fetch('../utils/lobby_actions.php', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.status === 'ok') {
-                            window.location.href = '../index.php';
-                        }
-                    } catch (error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Erro',
-                            text: 'Não foi possível fechar a sala',
-                            background: '#1f1e1e',
-                            color: 'white'
-                        });
-                    }
-                }
-            }
-
-            async sairSala() {
-                const resultado = await Swal.fire({
-                    title: 'Sair da sala?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#33a4e6',
-                    cancelButtonColor: '#ff66bc',
-                    confirmButtonText: 'Sim, sair!',
-                    cancelButtonText: 'Cancelar',
-                    background: '#1f1e1e',
-                    color: 'white'
-                });
-
-                if (resultado.isConfirmed) {
-                    try {
-                        const formData = new FormData();
-                        formData.append('acao', 'sair_sala');
-                        formData.append('codigo_sala', codigoSala);
-
-                        const response = await fetch('../utils/lobby_actions.php', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.status === 'ok') {
-                            window.location.href = '../index.php';
-                        }
-                    } catch (error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Erro',
-                            text: 'Não foi possível sair da sala',
-                            background: '#1f1e1e',
-                            color: 'white'
-                        });
-                    }
-                }
-            }
-
-            async verificarStatusJogo() {
-                try {
-                    const formData = new FormData();
-                    formData.append('acao', 'verificar_status');
-                    formData.append('codigo_sala', codigoSala);
-
-                    const response = await fetch('../utils/lobby_actions.php', {
-                        method: 'POST',
-                        body: formData
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: 'Não foi possível iniciar o jogo',
+                        background: '#1f1e1e',
+                        color: 'white'
                     });
-                    
-                    const resultado = await response.json();
-                    
-                    if (resultado.status === 'iniciada') {
-                        window.location.href = `game.php?codigo=${codigoSala}`;
-                    }
-                } catch (error) {
-                    console.error('Erro ao verificar status:', error);
-                }
-            }
-
-            iniciarAtualizacao() {
-                setInterval(() => {
-                    this.carregarJogadores();
-                }, 3000);
-                
-                if (!ehHost) {
-                    setInterval(() => {
-                        this.verificarStatusJogo();
-                    }, 2000);
                 }
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            new LobbyController();
-        });
+        async function fecharSala() {
+            const result = await Swal.fire({
+                title: 'Fechar sala?',
+                text: 'Todos os jogadores serão desconectados',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff66bc',
+                cancelButtonColor: '#33a4e6',
+                confirmButtonText: 'Sim, fechar!',
+                cancelButtonText: 'Cancelar',
+                background: '#1f1e1e',
+                color: 'white'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const formData = new FormData();
+                    formData.append('acao', 'fechar_sala');
+                    formData.append('codigo_sala', codigoSala);
+
+                    const response = await fetch('../utils/lobby_actions.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'ok') {
+                        window.location.href = '../index.php';
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: 'Não foi possível fechar a sala',
+                        background: '#1f1e1e',
+                        color: 'white'
+                    });
+                }
+            }
+        }
+
+        async function sairSala() {
+            const result = await Swal.fire({
+                title: 'Sair da sala?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#33a4e6',
+                cancelButtonColor: '#ff66bc',
+                confirmButtonText: 'Sim, sair!',
+                cancelButtonText: 'Cancelar',
+                background: '#1f1e1e',
+                color: 'white'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const formData = new FormData();
+                    formData.append('acao', 'sair_sala');
+                    formData.append('codigo_sala', codigoSala);
+
+                    const response = await fetch('../utils/lobby_actions.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'ok') {
+                        window.location.href = '../index.php';
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro',
+                        text: 'Não foi possível sair da sala',
+                        background: '#1f1e1e',
+                        color: 'white'
+                    });
+                }
+            }
+        }
+
+        async function verificarStatus() {
+            if (ehHost) return; 
+
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'verificar_status');
+                formData.append('codigo_sala', codigoSala);
+
+                const response = await fetch('../utils/lobby_actions.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'iniciada') {
+                    window.location.href = `game.php?codigo=${codigoSala}`;
+                }
+            } catch (error) {
+                console.error('Erro ao verificar status:', error);
+            }
+        }
+
+        if (ehHost) {
+            document.getElementById('btnIniciar').onclick = iniciarJogo;
+            document.getElementById('btnFechar').onclick = fecharSala;
+        } else {
+            document.getElementById('btnSair').onclick = sairSala;
+        }
+
+        setInterval(carregarJogadores, 2000);
+        
+        if (!ehHost) {
+            setInterval(verificarStatus, 2000);
+        }
+
+        carregarJogadores();
     </script>
 </body>
 </html>
