@@ -2,7 +2,6 @@
 session_start();
 include "../db/conexao.php";
 
-// Pega o código da sala
 $codigo = $_GET['codigo'] ?? '';
 
 if (empty($codigo)) {
@@ -10,7 +9,6 @@ if (empty($codigo)) {
     exit;
 }
 
-// Busca informações da sala
 $stmt = $conn->prepare("SELECT s.*, c.nome_categoria FROM salas s JOIN categorias c ON s.id_categoria = c.id_categoria WHERE s.codigo_sala = ?");
 $stmt->bind_param("s", $codigo);
 $stmt->execute();
@@ -23,19 +21,34 @@ if ($result->num_rows === 0) {
 
 $sala = $result->fetch_assoc();
 
-// Verifica se o jogador está na sessão
-$id_jogador = $_SESSION['id_jogador'] ?? 0;
-$nome_jogador = $_SESSION['nome_jogador'] ?? 'Desconhecido';
+if ($sala['status'] !== 'iniciada') {
+    header("Location: lobby.php?codigo=" . $codigo);
+    exit;
+}
 
-// Busca todos os jogadores da sala
-$stmt = $conn->prepare("SELECT nome, is_host FROM jogadores WHERE id_sala = ? ORDER BY is_host DESC, id_jogador ASC");
-$stmt->bind_param("i", $sala['id_sala']);
+$id_jogador = $_SESSION['id_jogador'] ?? 0;
+$nome_jogador = $_SESSION['nome_jogador'] ?? '';
+
+$stmt = $conn->prepare("SELECT id_jogador FROM jogadores WHERE id_jogador = ? AND id_sala = ?");
+$stmt->bind_param("ii", $id_jogador, $sala['id_sala']);
 $stmt->execute();
 $result = $stmt->get_result();
 
-$jogadores = [];
-while ($row = $result->fetch_assoc()) {
-    $jogadores[] = $row;
+if ($result->num_rows === 0) {
+    header("Location: ../index.php");
+    exit;
+}
+
+$stmt = $conn->prepare("SELECT COUNT(*) as respondidas FROM respostas WHERE id_jogador = ?");
+$stmt->bind_param("i", $id_jogador);
+$stmt->execute();
+$result = $stmt->get_result();
+$progresso = $result->fetch_assoc();
+$pergunta_atual = $progresso['respondidas'] + 1;
+
+if ($pergunta_atual > $sala['rodadas']) {
+    header("Location: ranking.php?codigo=" . $codigo);
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -43,144 +56,253 @@ while ($row = $result->fetch_assoc()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo Iniciado - BarelyKnow</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 600px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        h1 {
-            font-size: 3em;
-            margin-bottom: 20px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .info-box {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-
-        .info-item {
-            margin: 10px 0;
-            font-size: 1.2em;
-        }
-
-        .jogadores-list {
-            margin-top: 30px;
-            text-align: left;
-        }
-
-        .jogador {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .badge {
-            background: #ffd700;
-            color: #333;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
-
-        .emoji {
-            font-size: 1.5em;
-        }
-
-        .btn-voltar {
-            margin-top: 30px;
-            padding: 15px 30px;
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-voltar:hover {
-            background: #ff5252;
-            transform: translateY(-2px);
-        }
-    </style>
+    <title>Jogo - BarelyKnow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../public/style/game.css">
 </head>
-<body>
-    <div class="container">
-        <h1>🎮 JOGO INICIADO! 🎮</h1>
-        
-        <div class="info-box">
-            <div class="info-item">
-                <strong>Código da Sala:</strong> <?= $codigo ?>
+<body class="body-game">
+    <div class="container-game">
+        <div class="game-header">
+            <div class="sala-info">
+                <span class="codigo-sala">Sala: <?= $codigo ?></span>
+                <span class="categoria"><?= $sala['nome_categoria'] ?></span>
             </div>
-            <div class="info-item">
-                <strong>Categoria:</strong> <?= $sala['nome_categoria'] ?>
+            <div class="progresso">
+                <span class="pergunta-atual">Pergunta <?= $pergunta_atual ?>/<?= $sala['rodadas'] ?></span>
             </div>
-            <div class="info-item">
-                <strong>Rodadas:</strong> <?= $sala['rodadas'] ?>
-            </div>
-            <div class="info-item">
-                <strong>Tempo por Pergunta:</strong> <?= $sala['tempo_resposta'] ?> segundos
+            <div class="player-info">
+                <span class="nome-jogador"><?= htmlspecialchars($nome_jogador) ?></span>
             </div>
         </div>
 
-        <div class="jogadores-list">
-            <h2>👥 Jogadores na Partida:</h2>
-            <?php foreach ($jogadores as $jogador): ?>
-                <div class="jogador">
-                    <span class="emoji"><?= $jogador['is_host'] ? '👑' : '🎮' ?></span>
-                    <span><?= htmlspecialchars($jogador['nome']) ?></span>
-                    <?php if ($jogador['is_host']): ?>
-                        <span class="badge">HOST</span>
-                    <?php endif; ?>
+        <div class="pergunta-area">
+            <div class="pergunta-box" id="perguntaBox">
+                <p class="pergunta-texto" id="perguntaTexto">Carregando pergunta...</p>
+            </div>
+            
+            <div class="temporizador-container">
+                <div class="temporizador" id="temporizador">
+                    <div class="tempo-bar" id="tempoBar"></div>
+                    <span class="tempo-texto" id="tempoTexto"><?= $sala['tempo_resposta'] ?>s</span>
                 </div>
-            <?php endforeach; ?>
+            </div>
         </div>
 
-        <p style="margin-top: 30px; font-size: 1.2em;">
-            ✅ Sistema funcionando corretamente!<br>
-            Aqui você irá implementar o quiz futuramente.
-        </p>
+        <div class="alternativas-container" id="alternativasContainer">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <button class="btn-alternativa" data-alternativa="1" onclick="responder(1)">
+                        <span class="alt-letra">A</span>
+                        <span class="alt-texto" id="alt1">Carregando...</span>
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn-alternativa" data-alternativa="2" onclick="responder(2)">
+                        <span class="alt-letra">B</span>
+                        <span class="alt-texto" id="alt2">Carregando...</span>
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn-alternativa" data-alternativa="3" onclick="responder(3)">
+                        <span class="alt-letra">C</span>
+                        <span class="alt-texto" id="alt3">Carregando...</span>
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn-alternativa" data-alternativa="4" onclick="responder(4)">
+                        <span class="alt-letra">D</span>
+                        <span class="alt-texto" id="alt4">Carregando...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-        <button class="btn-voltar" onclick="window.location.href='../index.php'">
-            🏠 Voltar para Início
-        </button>
+        <div class="feedback-container" id="feedbackContainer" style="display: none;">
+            <div class="feedback-box" id="feedbackBox">
+                <h3 id="feedbackTitulo"></h3>
+                <p id="feedbackTexto"></p>
+                <div class="proxima-pergunta" id="proximaPergunta">
+                    Próxima pergunta em <span id="contadorProxima">5</span>s
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const codigoSala = "<?= $codigo ?>";
+        const tempoTotal = <?= $sala['tempo_resposta'] ?>;
+        const idJogador = <?= $id_jogador ?>;
+        const perguntaAtual = <?= $pergunta_atual ?>;
+        const totalRodadas = <?= $sala['rodadas'] ?>;
+
+        let tempoRestante = tempoTotal;
+        let temporizadorInterval;
+        let perguntaAtualData = null;
+        let respostaEnviada = false;
+
+        async function carregarPergunta() {
+            try {
+                const response = await fetch('../utils/game_logic.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `acao=carregar_pergunta&codigo_sala=${codigoSala}&id_jogador=${idJogador}`
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    perguntaAtualData = data.pergunta;
+                    exibirPergunta(data.pergunta);
+                    iniciarTemporizador();
+                } else if (data.status === 'fim') {
+                    window.location.href = 'ranking.php?codigo=' + codigoSala;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar pergunta:', error);
+            }
+        }
+
+        function exibirPergunta(pergunta) {
+            document.getElementById('perguntaTexto').textContent = pergunta.pergunta;
+            document.getElementById('alt1').textContent = pergunta.alternativas[0];
+            document.getElementById('alt2').textContent = pergunta.alternativas[1];
+            document.getElementById('alt3').textContent = pergunta.alternativas[2];
+            document.getElementById('alt4').textContent = pergunta.alternativas[3];
+            
+            document.querySelector('.pergunta-atual').textContent = `Pergunta ${pergunta.numero}/${totalRodadas}`;
+            
+            document.querySelectorAll('.btn-alternativa').forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('correta', 'incorreta', 'selecionada');
+            });
+            
+            respostaEnviada = false;
+        }
+
+        function iniciarTemporizador() {
+            tempoRestante = tempoTotal;
+            atualizarTemporizador();
+            
+            clearInterval(temporizadorInterval);
+            temporizadorInterval = setInterval(() => {
+                tempoRestante--;
+                atualizarTemporizador();
+                
+                if (tempoRestante <= 0) {
+                    clearInterval(temporizadorInterval);
+                    if (!respostaEnviada) {
+                        responder(0);
+                    }
+                }
+            }, 1000);
+        }
+
+        function atualizarTemporizador() {
+            const tempoBar = document.getElementById('tempoBar');
+            const tempoTexto = document.getElementById('tempoTexto');
+            
+            const porcentagem = (tempoRestante / tempoTotal) * 100;
+            tempoBar.style.width = porcentagem + '%';
+            tempoTexto.textContent = tempoRestante + 's';
+            
+            if (porcentagem <= 25) {
+                tempoBar.style.backgroundColor = 'var(--cor-rosa)';
+            } else if (porcentagem <= 50) {
+                tempoBar.style.backgroundColor = 'var(--cor-amarela)';
+            } else {
+                tempoBar.style.backgroundColor = 'var(--cor-azul)';
+            }
+        }
+
+        async function responder(alternativaEscolhida) {
+            if (respostaEnviada) return;
+            
+            respostaEnviada = true;
+            clearInterval(temporizadorInterval);
+            
+            document.querySelectorAll('.btn-alternativa').forEach(btn => {
+                btn.disabled = true;
+            });
+            
+            if (alternativaEscolhida > 0) {
+                const btnSelecionado = document.querySelector(`[data-alternativa="${alternativaEscolhida}"]`);
+                btnSelecionado.classList.add('selecionada');
+            }
+
+            try {
+                const response = await fetch('../utils/game_logic.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `acao=responder&codigo_sala=${codigoSala}&id_jogador=${idJogador}&alternativa=${alternativaEscolhida}&tempo_restante=${tempoRestante}`
+                });
+                
+                const data = await response.json();
+                mostrarFeedback(data);
+                
+            } catch (error) {
+                console.error('Erro ao enviar resposta:', error);
+            }
+        }
+
+        function mostrarFeedback(data) {
+            const feedbackContainer = document.getElementById('feedbackContainer');
+            const feedbackBox = document.getElementById('feedbackBox');
+            const feedbackTitulo = document.getElementById('feedbackTitulo');
+            const feedbackTexto = document.getElementById('feedbackTexto');
+            const alternativasContainer = document.getElementById('alternativasContainer');
+
+            if (perguntaAtualData && data.resposta_correta > 0) {
+                const btnCorreta = document.querySelector(`[data-alternativa="${data.resposta_correta}"]`);
+                btnCorreta.classList.add('correta');
+            }
+
+            if (data.acertou) {
+                feedbackTitulo.textContent = '✅ Resposta Correta!';
+                feedbackTitulo.style.color = 'var(--cor-azul)';
+                feedbackTexto.textContent = `Você ganhou ${data.pontos} pontos!`;
+            } else {
+                if (data.alternativa_escolhida === 0) {
+                    feedbackTitulo.textContent = '⏰ Tempo Esgotado!';
+                    feedbackTexto.textContent = 'O tempo acabou antes de você responder.';
+                } else {
+                    feedbackTitulo.textContent = '❌ Resposta Incorreta';
+                    feedbackTexto.textContent = 'Não foi dessa vez!';
+                }
+                feedbackTitulo.style.color = 'var(--cor-rosa)';
+            }
+
+            feedbackContainer.style.display = 'block';
+            alternativasContainer.style.opacity = '0.6';
+
+            let contador = 5;
+            const contadorElement = document.getElementById('contadorProxima');
+            
+            const contadorInterval = setInterval(() => {
+                contador--;
+                contadorElement.textContent = contador;
+                
+                if (contador <= 0) {
+                    clearInterval(contadorInterval);
+                    avancarPergunta();
+                }
+            }, 1000);
+        }
+
+        function avancarPergunta() {
+            if (perguntaAtual >= totalRodadas) {
+                window.location.href = 'ranking.php?codigo=' + codigoSala;
+            } else {
+                window.location.reload();
+            }
+        }
+
+        carregarPergunta();
+    </script>
 </body>
 </html>

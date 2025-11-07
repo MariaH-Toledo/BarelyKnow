@@ -1,0 +1,187 @@
+@import url('style.css');
+
+.body-ranking {
+    background-color: var(--cor-fundo);
+    color: var(--cor-branco);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.container-ranking {
+    max-width: 700px;
+    width: 100%;
+}
+
+.header-ranking {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.titulo-ranking {
+    font-size: 2.5em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: var(--cor-amarela);
+}
+
+.info-ranking {
+    color: var(--cor-branco2);
+    font-size: 1.1em;
+}
+
+.ranking-box {
+    background: var(--cor-fundo2);
+    border-radius: 15px;
+    border: 2px solid var(--cor-azul2);
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.ranking-header {
+    display: grid;
+    grid-template-columns: 100px 1fr 120px;
+    gap: 15px;
+    padding: 20px;
+    background: var(--cor-azul2);
+    font-weight: bold;
+    text-align: center;
+}
+
+.ranking-list {
+    padding: 0;
+}
+
+.ranking-item {
+    display: grid;
+    grid-template-columns: 100px 1fr 120px;
+    gap: 15px;
+    padding: 20px;
+    border-bottom: 1px solid #333;
+    align-items: center;
+    text-align: center;
+    transition: background 0.3s;
+}
+
+.ranking-item:last-child {
+    border-bottom: none;
+}
+
+.ranking-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ranking-item.primeiro {
+    background: linear-gradient(135deg, rgba(253, 196, 58, 0.2), rgba(255, 244, 146, 0.1));
+    border-left: 4px solid var(--cor-amarela);
+}
+
+.posicao {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.ranking-item.primeiro .posicao {
+    color: var(--cor-amarela);
+    font-size: 1.3em;
+}
+
+.nome-jogador {
+    text-align: left;
+    font-weight: 500;
+}
+
+.badge-host {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.pontuacao {
+    font-weight: bold;
+    color: var(--cor-azul);
+    font-size: 1.1em;
+}
+
+.ranking-item.primeiro .pontuacao {
+    color: var(--cor-amarela);
+    font-size: 1.2em;
+}
+
+.botoes-ranking {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+}
+
+.btn {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1em;
+}
+
+.btn-voltar-inicio {
+    background: var(--cor-azul);
+    color: var(--cor-branco);
+}
+
+.btn-voltar-inicio:hover {
+    background: var(--cor-azul2);
+    transform: translateY(-2px);
+}
+
+.btn-nova-sala {
+    background: var(--cor-rosa);
+    color: var(--cor-branco);
+}
+
+.btn-nova-sala:hover {
+    background: #ff66bc;
+    transform: translateY(-2px);
+}
+
+.footer-ranking {
+    text-align: center;
+    color: var(--cor-branco2);
+    font-size: 0.9em;
+}
+
+@media (max-width: 768px) {
+    .ranking-header,
+    .ranking-item {
+        grid-template-columns: 60px 1fr 80px;
+        padding: 15px 10px;
+        gap: 10px;
+    }
+    
+    .titulo-ranking {
+        font-size: 2em;
+    }
+    
+    .botoes-ranking {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn {
+        width: 100%;
+        max-width: 250px;
+        justify-content: center;
+    }
+}
