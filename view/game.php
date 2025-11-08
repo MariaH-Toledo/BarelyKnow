@@ -29,7 +29,7 @@ if ($sala['status'] !== 'iniciada') {
 $id_jogador = $_SESSION['id_jogador'] ?? 0;
 $nome_jogador = $_SESSION['nome_jogador'] ?? '';
 
-$stmt = $conn->prepare("SELECT id_jogador FROM jogadores WHERE id_jogador = ? AND id_sala = ?");
+$stmt = $conn->prepare("SELECT id_jogador, is_host FROM jogadores WHERE id_jogador = ? AND id_sala = ?");
 $stmt->bind_param("ii", $id_jogador, $sala['id_sala']);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -38,6 +38,9 @@ if ($result->num_rows === 0) {
     header("Location: ../index.php");
     exit;
 }
+
+$jogador = $result->fetch_assoc();
+$eh_host = ($jogador['is_host'] == 1);
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -121,13 +124,17 @@ if ($result->num_rows === 0) {
     <script>
         const codigoSala = "<?= $codigo ?>";
         const idJogador = <?= $id_jogador ?>;
+        const ehHost = <?= $eh_host ? 'true' : 'false' ?>;
         
         let tempoRestante = 0;
         let tempoTotal = 0;
         let temporizadorInterval = null;
         let respostaEnviada = false;
-        let perguntaAtualData = null;
+        let perguntaAtualNumero = 0;
         let momentoClique = 0;
+        let aguardandoProximaPergunta = false;
+        
+        carregarPergunta();
         
         async function carregarPergunta() {
             try {
@@ -144,9 +151,8 @@ if ($result->num_rows === 0) {
                 const data = await response.json();
                 
                 if (data.status === 'ok') {
-                    perguntaAtualData = data.pergunta;
                     exibirPergunta(data.pergunta);
-                    iniciarTemporizador(data.pergunta.tempo_restante);
+                    iniciarTemporizador(data.pergunta.tempo_restante, data.pergunta.tempo_total);
                 } else if (data.status === 'fim') {
                     window.location.href = 'ranking.php?codigo=' + codigoSala;
                 } else if (data.status === 'aguardando') {
@@ -159,6 +165,12 @@ if ($result->num_rows === 0) {
         }
 
         function exibirPergunta(pergunta) {
+            respostaEnviada = false;
+            aguardandoProximaPergunta = false;
+            perguntaAtualNumero = pergunta.numero;
+            
+            document.getElementById('feedbackContainer').style.display = 'none';
+            
             document.getElementById('perguntaTexto').textContent = pergunta.pergunta;
             document.getElementById('alt1').textContent = pergunta.alternativas[0];
             document.getElementById('alt2').textContent = pergunta.alternativas[1];
@@ -173,14 +185,13 @@ if ($result->num_rows === 0) {
             
             if (pergunta.ja_respondeu) {
                 document.querySelectorAll('.btn-alternativa').forEach(btn => btn.disabled = true);
+                respostaEnviada = true;
             }
-            
-            respostaEnviada = pergunta.ja_respondeu;
         }
 
-        function iniciarTemporizador(tempoInicial) {
+        function iniciarTemporizador(tempoInicial, tempoTotalConfig) {
             tempoRestante = tempoInicial;
-            tempoTotal = tempoInicial;
+            tempoTotal = tempoTotalConfig;
             atualizarTemporizador();
             
             if (temporizadorInterval) clearInterval(temporizadorInterval);
@@ -191,7 +202,14 @@ if ($result->num_rows === 0) {
                 if (tempoRestante <= 0) {
                     tempoRestante = 0;
                     clearInterval(temporizadorInterval);
-                    if (!respostaEnviada) responder(0);
+                    
+                    if (!respostaEnviada) {
+                        responder(0);
+                    }
+                    
+                    setTimeout(() => {
+                        verificarResultadoFinal();
+                    }, 500);
                 }
                 
                 atualizarTemporizador();
@@ -218,8 +236,8 @@ if ($result->num_rows === 0) {
         async function responder(alternativaEscolhida) {
             if (respostaEnviada) return;
             respostaEnviada = true;
+            
             momentoClique = tempoTotal - tempoRestante;
-            clearInterval(temporizadorInterval);
             
             document.querySelectorAll('.btn-alternativa').forEach(btn => btn.disabled = true);
             
@@ -239,23 +257,14 @@ if ($result->num_rows === 0) {
                     method: 'POST',
                     body: formData
                 });
-                
-                aguardarFimTempo();
             } catch (error) {
-                console.error('Erro:', error);
+                console.error('Erro ao enviar resposta:', error);
             }
         }
 
-        function aguardarFimTempo() {
-            const checkInterval = setInterval(() => {
-                if (tempoRestante <= 0) {
-                    clearInterval(checkInterval);
-                    mostrarResultado();
-                }
-            }, 100);
-        }
-
-        async function mostrarResultado() {
+        async function verificarResultadoFinal() {
+            if (aguardandoProximaPergunta) return;
+            
             try {
                 const formData = new FormData();
                 formData.append('acao', 'verificar_resultado');
@@ -268,13 +277,21 @@ if ($result->num_rows === 0) {
                 });
                 
                 const data = await response.json();
-                if (data.status === 'ok') mostrarFeedback(data);
+                
+                if (data.status === 'ok' && data.tempo_acabou) {
+                    mostrarFeedback(data);
+                } else if (data.status === 'aguardando') {
+                    setTimeout(verificarResultadoFinal, 1000);
+                }
             } catch (error) {
                 console.error('Erro:', error);
+                setTimeout(verificarResultadoFinal, 2000);
             }
         }
 
         function mostrarFeedback(data) {
+            aguardandoProximaPergunta = true;
+            
             const feedbackContainer = document.getElementById('feedbackContainer');
             const feedbackTitulo = document.getElementById('feedbackTitulo');
             const feedbackTexto = document.getElementById('feedbackTexto');
@@ -302,8 +319,30 @@ if ($result->num_rows === 0) {
                 feedbackTitulo.style.color = 'var(--cor-rosa)';
             }
 
-            feedbackContainer.style.display = 'block';
-            setTimeout(verificarProximaPergunta, 2000);
+            feedbackContainer.style.display = 'flex';
+            
+            setTimeout(async () => {
+                if (ehHost) {
+                    await limparPerguntaAtual();
+                }
+                verificarProximaPergunta();
+            }, 5000);
+        }
+
+        async function limparPerguntaAtual() {
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'limpar_pergunta');
+                formData.append('codigo_sala', codigoSala);
+                formData.append('id_jogador', idJogador);
+
+                await fetch('../utils/game_logic.php', {
+                    method: 'POST',
+                    body: formData
+                });
+            } catch (error) {
+                console.error('Erro ao limpar pergunta:', error);
+            }
         }
 
         async function verificarProximaPergunta() {
@@ -320,8 +359,9 @@ if ($result->num_rows === 0) {
                 
                 const data = await response.json();
                 
-                if (data.status === 'ok' && data.pergunta.numero != perguntaAtualData.numero) {
-                    window.location.reload();
+                if (data.status === 'ok' && data.pergunta.numero !== perguntaAtualNumero) {
+                    exibirPergunta(data.pergunta);
+                    iniciarTemporizador(data.pergunta.tempo_restante, data.pergunta.tempo_total);
                 } else if (data.status === 'fim') {
                     window.location.href = 'ranking.php?codigo=' + codigoSala;
                 } else {
@@ -332,8 +372,6 @@ if ($result->num_rows === 0) {
                 setTimeout(verificarProximaPergunta, 2000);
             }
         }
-
-        carregarPergunta();
     </script>
 </body>
 </html>
