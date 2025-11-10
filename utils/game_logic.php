@@ -2,352 +2,388 @@
 session_start();
 header("Content-Type: application/json; charset=utf-8");
 
-ini_set('display_errors', 0);
-error_reporting(0);
+include "../db/conexao.php";
 
-try {
-    include "../db/conexao.php";
-    
-    $acao = $_POST['acao'] ?? '';
-    $codigo_sala = $_POST['codigo_sala'] ?? '';
-    $id_jogador = $_POST['id_jogador'] ?? 0;
-    
-    if (empty($codigo_sala) || empty($id_jogador)) {
-        echo json_encode(["status" => "erro", "mensagem" => "Dados invalidos"], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    
-    $stmt = $conn->prepare("SELECT id_sala FROM salas WHERE codigo_sala = ?");
-    $stmt->bind_param("s", $codigo_sala);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows === 0) {
-        echo json_encode(["status" => "erro", "mensagem" => "Sala nao encontrada"], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    
-    $sala = $result->fetch_assoc();
-    $id_sala = $sala['id_sala'];
-    
-    switch ($acao) {
-        case 'carregar_pergunta':
-            carregarPergunta($conn, $id_sala, $id_jogador);
-            break;
-            
-        case 'responder':
-            $alternativa = $_POST['alternativa'] ?? 0;
-            $tempo_clique = $_POST['tempo_clique'] ?? 0;
-            processarResposta($conn, $id_sala, $id_jogador, $alternativa, $tempo_clique);
-            break;
-            
-        case 'verificar_resultado':
-            verificarResultado($conn, $id_sala, $id_jogador);
-            break;
-        
-        case 'limpar_pergunta':
-            limparPergunta($conn, $id_sala, $id_jogador);
-            break;
-            
-        default:
-            echo json_encode(["status" => "erro", "mensagem" => "Acao desconhecida"], JSON_UNESCAPED_UNICODE);
-    }
-    
-} catch (Exception $e) {
-    echo json_encode(["status" => "erro", "mensagem" => "Erro interno: " . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+function resposta_json($arr) {
+    echo json_encode($arr, JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
-function carregarPergunta($conn, $id_sala, $id_jogador) {
+$acao = $_POST['acao'] ?? '';
+$codigo_sala = $_POST['codigo_sala'] ?? '';
+$id_jogador = intval($_POST['id_jogador'] ?? 0);
+
+if (empty($codigo_sala) || $id_jogador <= 0) {
+    resposta_json(["erro" => "Dados inválidos"]);
+}
+
+$stmt = $conn->prepare("SELECT id_sala FROM salas WHERE codigo_sala = ?");
+$stmt->bind_param("s", $codigo_sala);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+    resposta_json(["erro" => "Sala não encontrada"]);
+}
+
+$salaRow = $result->fetch_assoc();
+$id_sala = intval($salaRow['id_sala']);
+
+switch ($acao) {
+    case 'buscar_pergunta':
+        buscarPergunta($conn, $id_sala, $id_jogador);
+        break;
+    case 'enviar_resposta':
+        $alternativa = intval($_POST['alternativa'] ?? 0);
+        enviarResposta($conn, $id_sala, $id_jogador, $alternativa);
+        break;
+    case 'verificar_tempo':
+        verificarTempo($conn, $id_sala, $id_jogador);
+        break;
+    case 'proxima_pergunta':
+        proximaPergunta($conn, $id_sala, $id_jogador);
+        break;
+    default:
+        resposta_json(["erro" => "Ação desconhecida"]);
+}
+
+function buscarPergunta($conn, $id_sala, $id_jogador) {
     $stmt = $conn->prepare("
-        SELECT rodadas, rodada_atual, id_categoria, id_pergunta_atual, 
-               alternativas_ordem, tempo_inicio_pergunta, tempo_resposta 
-        FROM salas 
+        SELECT rodadas, rodada_atual, id_categoria, id_pergunta_atual, alternativas_ordem, tempo_inicio_pergunta, tempo_resposta, status
+        FROM salas
         WHERE id_sala = ?
     ");
     $stmt->bind_param("i", $id_sala);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $sala = $result->fetch_assoc();
-    
-    if ($sala['rodada_atual'] > $sala['rodadas']) {
-        echo json_encode(["status" => "fim"], JSON_UNESCAPED_UNICODE);
-        return;
+    $sala = $stmt->get_result()->fetch_assoc();
+
+    if (!$sala) resposta_json(["erro" => "Sala inválida"]);
+
+    $rodada_atual = intval($sala['rodada_atual']);
+    $rodadas = intval($sala['rodadas']);
+    if ($rodada_atual > $rodadas) {
+        resposta_json(["status" => "fim_jogo"]);
     }
-    
+
     $stmt = $conn->prepare("SELECT is_host FROM jogadores WHERE id_jogador = ? AND id_sala = ?");
     $stmt->bind_param("ii", $id_jogador, $id_sala);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $jogador = $result->fetch_assoc();
-    $eh_host = ($jogador['is_host'] == 1);
-    
-    if ($sala['id_pergunta_atual'] == null) {
-        if ($eh_host) {
-            criarNovaPergunta($conn, $id_sala, $sala);
-            
-            $stmt = $conn->prepare("
-                SELECT rodadas, rodada_atual, id_categoria, id_pergunta_atual, 
-                       alternativas_ordem, tempo_inicio_pergunta, tempo_resposta 
-                FROM salas 
-                WHERE id_sala = ?
-            ");
-            $stmt->bind_param("i", $id_sala);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $sala = $result->fetch_assoc();
-        } else {
-            echo json_encode(["status" => "aguardando"], JSON_UNESCAPED_UNICODE);
-            return;
+    $jog = $stmt->get_result()->fetch_assoc();
+    $eh_host = ($jog && intval($jog['is_host']) === 1);
+
+    if (is_null($sala['id_pergunta_atual'])) {
+        if (!$eh_host) {
+            resposta_json(["status" => "aguardando"]);
         }
+
+        $conn->begin_transaction();
+        try {
+            $qry = $conn->prepare("SELECT id_pergunta_atual, rodada_atual, rodadas, id_categoria, tempo_resposta FROM salas WHERE id_sala = ? FOR UPDATE");
+            $qry->bind_param("i", $id_sala);
+            $qry->execute();
+            $lockedSala = $qry->get_result()->fetch_assoc();
+
+            if (is_null($lockedSala['id_pergunta_atual'])) {
+                $rodada_atual_locked = intval($lockedSala['rodada_atual']);
+                $rodadas_locked = intval($lockedSala['rodadas']);
+                if ($rodada_atual_locked >= $rodadas_locked) {
+                    $conn->commit();
+                    resposta_json(["status" => "fim_jogo"]);
+                }
+
+                $id_categoria = intval($lockedSala['id_categoria']);
+                $stmtP = $conn->prepare("SELECT * FROM perguntas WHERE id_categoria = ? ORDER BY RAND() LIMIT 1");
+                $stmtP->bind_param("i", $id_categoria);
+                $stmtP->execute();
+                $pergunta = $stmtP->get_result()->fetch_assoc();
+
+                if (!$pergunta) {
+                    $conn->commit();
+                    resposta_json(["erro" => "Sem perguntas na categoria"]);
+                }
+
+                $alternativas = [
+                    $pergunta['alternativa1'],
+                    $pergunta['alternativa2'],
+                    $pergunta['alternativa3'],
+                    $pergunta['alternativa4']
+                ];
+                shuffle($alternativas);
+                $ordem_json = json_encode($alternativas, JSON_UNESCAPED_UNICODE);
+
+                $nova_rodada = $rodada_atual_locked + 1;
+                $tempo_resposta = intval($lockedSala['tempo_resposta']);
+
+                $upd = $conn->prepare("
+                    UPDATE salas
+                    SET rodada_atual = ?, id_pergunta_atual = ?, alternativas_ordem = ?, tempo_inicio_pergunta = NOW(), tempo_resposta = ?
+                    WHERE id_sala = ?
+                ");
+                $upd->bind_param("iissi", $nova_rodada, $pergunta['id_pergunta'], $ordem_json, $tempo_resposta, $id_sala);
+                $upd->execute();
+            }
+            $conn->commit();
+        } catch (Exception $e) {
+            $conn->rollback();
+            resposta_json(["erro" => "Erro ao criar pergunta (lock): " . $e->getMessage()]);
+        }
+
+        $stmt = $conn->prepare("
+            SELECT rodadas, rodada_atual, id_categoria, id_pergunta_atual, alternativas_ordem, tempo_inicio_pergunta, tempo_resposta
+            FROM salas
+            WHERE id_sala = ?
+        ");
+        $stmt->bind_param("i", $id_sala);
+        $stmt->execute();
+        $sala = $stmt->get_result()->fetch_assoc();
     }
-    
+
+    if (!$sala['id_pergunta_atual']) {
+        resposta_json(["status" => "aguardando"]);
+    }
+
+    $id_pergunta = intval($sala['id_pergunta_atual']);
     $stmt = $conn->prepare("SELECT * FROM perguntas WHERE id_pergunta = ?");
-    $stmt->bind_param("i", $sala['id_pergunta_atual']);
+    $stmt->bind_param("i", $id_pergunta);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $pergunta = $result->fetch_assoc();
-    
-    if (!$pergunta) {
-        echo json_encode(["status" => "erro", "mensagem" => "Pergunta nao encontrada"], JSON_UNESCAPED_UNICODE);
-        return;
-    }
-    
+    $pergunta = $stmt->get_result()->fetch_assoc();
+
+    if (!$pergunta) resposta_json(["erro" => "Pergunta não encontrada"]);
+
     $alternativas = json_decode($sala['alternativas_ordem'], true);
-    $resposta_correta = array_search($pergunta['alternativa1'], $alternativas) + 1;
-    
-    $tempo_inicio = strtotime($sala['tempo_inicio_pergunta']);
-    $tempo_atual = time();
-    $tempo_decorrido = $tempo_atual - $tempo_inicio;
-    $tempo_restante = max(0, $sala['tempo_resposta'] - $tempo_decorrido);
-    
+    if (!is_array($alternativas) || count($alternativas) !== 4) {
+        $alternativas = [
+            $pergunta['alternativa1'],
+            $pergunta['alternativa2'],
+            $pergunta['alternativa3'],
+            $pergunta['alternativa4']
+        ];
+    }
+
+    $posicao_correta = array_search($pergunta['alternativa1'], $alternativas);
+    $posicao_correta = ($posicao_correta === false) ? 1 : ($posicao_correta + 1);
+
+    $tempo_inicio = $sala['tempo_inicio_pergunta'] ? strtotime($sala['tempo_inicio_pergunta']) : null;
+    $tempo_total = intval($sala['tempo_resposta']);
+    $timestamp_servidor = time();
+
+    if ($tempo_inicio === null) {
+        $tempo_passado = 0;
+        $tempo_restante = $tempo_total;
+        $timestamp_inicio = $timestamp_servidor;
+    } else {
+        $tempo_passado = max(0, $timestamp_servidor - $tempo_inicio);
+        $tempo_restante = max(0, $tempo_total - $tempo_passado);
+        $timestamp_inicio = $tempo_inicio;
+    }
+
     $stmt = $conn->prepare("SELECT id_resposta FROM respostas WHERE id_jogador = ? AND id_pergunta = ?");
-    $stmt->bind_param("ii", $id_jogador, $sala['id_pergunta_atual']);
+    $stmt->bind_param("ii", $id_jogador, $id_pergunta);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $ja_respondeu = ($result->num_rows > 0);
-    
-    echo json_encode([
+    $ja_respondeu = ($stmt->get_result()->num_rows > 0);
+
+    resposta_json([
         "status" => "ok",
-        "pergunta" => [
-            "numero" => $sala['rodada_atual'],
-            "total" => $sala['rodadas'],
-            "pergunta" => $pergunta['pergunta'],
-            "alternativas" => $alternativas,
-            "resposta_correta" => $resposta_correta,
-            "tempo_restante" => $tempo_restante,
-            "tempo_total" => $sala['tempo_resposta'],
-            "ja_respondeu" => $ja_respondeu
-        ]
-    ], JSON_UNESCAPED_UNICODE);
+        "rodada_atual" => intval($sala['rodada_atual']),
+        "total_rodadas" => intval($sala['rodadas']),
+        "pergunta" => $pergunta['pergunta'],
+        "alternativas" => $alternativas,
+        "tempo_restante" => $tempo_restante,
+        "tempo_total" => $tempo_total,
+        "ja_respondeu" => $ja_respondeu,
+        "resposta_correta" => $posicao_correta,
+        "timestamp_inicio" => $timestamp_inicio,
+        "timestamp_servidor" => $timestamp_servidor,
+        "tempo_passado_servidor" => $tempo_passado
+    ]);
 }
 
-function criarNovaPergunta($conn, $id_sala, $sala) {
-    $nova_rodada = $sala['rodada_atual'] + 1;
-    
-    if ($nova_rodada > $sala['rodadas']) {
-        return;
+function enviarResposta($conn, $id_sala, $id_jogador, $alternativa_escolhida) {
+    if ($alternativa_escolhida < 1 || $alternativa_escolhida > 4) {
+        resposta_json(["erro" => "Alternativa inválida"]);
     }
-    
-    $stmt = $conn->prepare("
-        SELECT * FROM perguntas 
-        WHERE id_categoria = ? 
-        ORDER BY RAND() 
-        LIMIT 1
-    ");
-    $stmt->bind_param("i", $sala['id_categoria']);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $pergunta = $result->fetch_assoc();
-    
-    if (!$pergunta) {
-        return;
-    }
-    
-    $alternativas = [
-        $pergunta['alternativa1'],
-        $pergunta['alternativa2'],
-        $pergunta['alternativa3'],
-        $pergunta['alternativa4']
-    ];
-    
-    shuffle($alternativas);
-    $ordem_json = json_encode($alternativas, JSON_UNESCAPED_UNICODE);
-    
-    $stmt = $conn->prepare("
-        UPDATE salas 
-        SET rodada_atual = ?, 
-            id_pergunta_atual = ?, 
-            alternativas_ordem = ?, 
-            tempo_inicio_pergunta = NOW() 
-        WHERE id_sala = ?
-    ");
-    $stmt->bind_param("iisi", $nova_rodada, $pergunta['id_pergunta'], $ordem_json, $id_sala);
-    $stmt->execute();
-}
 
-function processarResposta($conn, $id_sala, $id_jogador, $alternativa_escolhida, $tempo_clique) {
-    $stmt = $conn->prepare("
-        SELECT id_pergunta_atual, alternativas_ordem, tempo_resposta, tempo_inicio_pergunta 
-        FROM salas 
-        WHERE id_sala = ?
-    ");
+    $stmt = $conn->prepare("SELECT id_pergunta_atual, alternativas_ordem, tempo_inicio_pergunta, tempo_resposta FROM salas WHERE id_sala = ?");
     $stmt->bind_param("i", $id_sala);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $sala = $result->fetch_assoc();
-    
-    if (!$sala['id_pergunta_atual']) {
-        echo json_encode(["status" => "erro", "mensagem" => "Nenhuma pergunta ativa"], JSON_UNESCAPED_UNICODE);
-        return;
+    $sala = $stmt->get_result()->fetch_assoc();
+
+    if (!$sala || !$sala['id_pergunta_atual']) {
+        resposta_json(["erro" => "Nenhuma pergunta ativa"]);
     }
-    
+
+    $id_pergunta = intval($sala['id_pergunta_atual']);
+    $tempo_inicio = $sala['tempo_inicio_pergunta'] ? strtotime($sala['tempo_inicio_pergunta']) : null;
+    $tempo_total = intval($sala['tempo_resposta']);
+    $now = time();
+
+    if ($tempo_inicio === null) {
+        resposta_json(["erro" => "Tempo de pergunta inválido"]);
+    }
+
+    $tempo_passado = max(0, $now - $tempo_inicio);
+    if ($tempo_passado > $tempo_total) {
+        resposta_json(["erro" => "Tempo esgotado para responder"]);
+    }
+
     $stmt = $conn->prepare("SELECT id_resposta FROM respostas WHERE id_jogador = ? AND id_pergunta = ?");
-    $stmt->bind_param("ii", $id_jogador, $sala['id_pergunta_atual']);
+    $stmt->bind_param("ii", $id_jogador, $id_pergunta);
     $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        echo json_encode(["status" => "erro", "mensagem" => "Voce ja respondeu esta pergunta"], JSON_UNESCAPED_UNICODE);
-        return;
+    if ($stmt->get_result()->num_rows > 0) {
+        resposta_json(["erro" => "Você já respondeu"]);
     }
-    
+
     $stmt = $conn->prepare("SELECT alternativa1 FROM perguntas WHERE id_pergunta = ?");
-    $stmt->bind_param("i", $sala['id_pergunta_atual']);
+    $stmt->bind_param("i", $id_pergunta);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $pergunta = $result->fetch_assoc();
-    
+    $perg = $stmt->get_result()->fetch_assoc();
+    if (!$perg) resposta_json(["erro" => "Pergunta não encontrada"]);
+
     $alternativas = json_decode($sala['alternativas_ordem'], true);
-    $resposta_correta = array_search($pergunta['alternativa1'], $alternativas) + 1;
-    $acertou = ($alternativa_escolhida == $resposta_correta && $alternativa_escolhida > 0);
-    
+    if (!is_array($alternativas) || count($alternativas) !== 4) {
+        $posicao_correta = 1;
+    } else {
+        $pos = array_search($perg['alternativa1'], $alternativas);
+        $posicao_correta = ($pos === false) ? 1 : ($pos + 1);
+    }
+
+    $acertou = ($alternativa_escolhida === $posicao_correta) ? 1 : 0;
+
+    $tempo_resposta_servidor = $tempo_passado;
     $pontos = 0;
     if ($acertou) {
-        $pontos = max(100, intval(1000 - ($tempo_clique * 50)));
+        $pontos = max(100, 1000 - ($tempo_resposta_servidor * 50));
     }
-    
+
     $letras = ['', 'A', 'B', 'C', 'D'];
-    $resposta_texto = $alternativa_escolhida > 0 ? $letras[$alternativa_escolhida] : '';
-    
+    $letra_escolhida = $letras[$alternativa_escolhida];
+
     $stmt = $conn->prepare("
-        INSERT INTO respostas (id_jogador, id_pergunta, resposta_escolhida, correta, tempo_resposta) 
+        INSERT INTO respostas (id_jogador, id_pergunta, resposta_escolhida, correta, tempo_resposta)
         VALUES (?, ?, ?, ?, ?)
     ");
-    $stmt->bind_param("iisii", $id_jogador, $sala['id_pergunta_atual'], $resposta_texto, $acertou, $tempo_clique);
-    $stmt->execute();
-    
+    $stmt->bind_param("iisii", $id_jogador, $id_pergunta, $letra_escolhida, $acertou, $tempo_resposta_servidor);
+    $ok = $stmt->execute();
+    if (!$ok) {
+        resposta_json(["erro" => "Erro ao salvar resposta"]);
+    }
+
     if ($pontos > 0) {
         $stmt = $conn->prepare("UPDATE jogadores SET pontos = pontos + ? WHERE id_jogador = ?");
         $stmt->bind_param("ii", $pontos, $id_jogador);
         $stmt->execute();
     }
-    
-    echo json_encode([
+
+    resposta_json([
         "status" => "ok",
-        "mensagem" => "Resposta registrada"
-    ], JSON_UNESCAPED_UNICODE);
+        "mensagem" => "Resposta registrada",
+        "acertou" => (bool)$acertou,
+        "pontos_ganhos" => intval($pontos)
+    ]);
 }
 
-function verificarResultado($conn, $id_sala, $id_jogador) {
-    $stmt = $conn->prepare("
-        SELECT id_pergunta_atual, alternativas_ordem, tempo_resposta, tempo_inicio_pergunta 
-        FROM salas 
-        WHERE id_sala = ?
-    ");
+function verificarTempo($conn, $id_sala, $id_jogador) {
+    $stmt = $conn->prepare("SELECT id_pergunta_atual, alternativas_ordem, tempo_resposta, tempo_inicio_pergunta FROM salas WHERE id_sala = ?");
     $stmt->bind_param("i", $id_sala);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $sala = $result->fetch_assoc();
-    
-    if (!$sala['id_pergunta_atual']) {
-        echo json_encode(["status" => "erro", "mensagem" => "Nenhuma pergunta ativa"], JSON_UNESCAPED_UNICODE);
-        return;
+    $sala = $stmt->get_result()->fetch_assoc();
+
+    if (!$sala || !$sala['id_pergunta_atual']) {
+        resposta_json(["erro" => "Nenhuma pergunta ativa"]);
     }
-    
-    $tempo_inicio = strtotime($sala['tempo_inicio_pergunta']);
-    $tempo_atual = time();
-    $tempo_decorrido = $tempo_atual - $tempo_inicio;
-    $tempo_acabou = $tempo_decorrido >= $sala['tempo_resposta'];
-    
+
+    $id_pergunta = intval($sala['id_pergunta_atual']);
+    $tempo_inicio = $sala['tempo_inicio_pergunta'] ? strtotime($sala['tempo_inicio_pergunta']) : null;
+    $tempo_total = intval($sala['tempo_resposta']);
+    $now = time();
+
+    if ($tempo_inicio === null) {
+        resposta_json(["erro" => "Tempo de pergunta inválido"]);
+    }
+
+    $tempo_passado = max(0, $now - $tempo_inicio);
+    $tempo_restante = max(0, $tempo_total - $tempo_passado);
+    $tempo_acabou = ($tempo_restante <= 0);
+
     if (!$tempo_acabou) {
-        echo json_encode([
+        resposta_json([
             "status" => "aguardando",
-            "tempo_restante" => $sala['tempo_resposta'] - $tempo_decorrido
-        ], JSON_UNESCAPED_UNICODE);
-        return;
+            "tempo_restante" => $tempo_restante,
+            "timestamp_servidor" => $now
+        ]);
     }
-    
+
     $stmt = $conn->prepare("SELECT alternativa1 FROM perguntas WHERE id_pergunta = ?");
-    $stmt->bind_param("i", $sala['id_pergunta_atual']);
+    $stmt->bind_param("i", $id_pergunta);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $pergunta = $result->fetch_assoc();
-    
+    $pergunta = $stmt->get_result()->fetch_assoc();
+    if (!$pergunta) resposta_json(["erro" => "Pergunta não encontrada"]);
+
     $alternativas = json_decode($sala['alternativas_ordem'], true);
-    $resposta_correta = array_search($pergunta['alternativa1'], $alternativas) + 1;
-    
-    $stmt = $conn->prepare("
-        SELECT resposta_escolhida, correta, tempo_resposta 
-        FROM respostas 
-        WHERE id_jogador = ? AND id_pergunta = ?
-    ");
-    $stmt->bind_param("ii", $id_jogador, $sala['id_pergunta_atual']);
+    $pos = array_search($pergunta['alternativa1'], $alternativas);
+    $posicao_correta = ($pos === false) ? 1 : ($pos + 1);
+
+    $stmt = $conn->prepare("SELECT resposta_escolhida, correta, tempo_resposta FROM respostas WHERE id_jogador = ? AND id_pergunta = ?");
+    $stmt->bind_param("ii", $id_jogador, $id_pergunta);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows > 0) {
         $resposta = $result->fetch_assoc();
-        
-        $letras = ['A' => 1, 'B' => 2, 'C' => 3, 'D' => 4];
-        $alternativa_escolhida = $resposta['resposta_escolhida'] != '' ? $letras[$resposta['resposta_escolhida']] : 0;
-        
+        $map = ['A' => 1, 'B' => 2, 'C' => 3, 'D' => 4];
+        $sua_resposta = isset($map[$resposta['resposta_escolhida']]) ? $map[$resposta['resposta_escolhida']] : 0;
         $pontos = 0;
-        if ($resposta['correta']) {
-            $pontos = max(100, intval(1000 - ($resposta['tempo_resposta'] * 50)));
+        if (intval($resposta['correta']) === 1) {
+            $pontos = max(100, 1000 - (intval($resposta['tempo_resposta']) * 50));
         }
-        
-        echo json_encode([
-            "status" => "ok",
-            "tempo_acabou" => true,
-            "acertou" => $resposta['correta'] == 1,
-            "pontos" => $pontos,
-            "resposta_correta" => $resposta_correta,
-            "alternativa_escolhida" => $alternativa_escolhida
-        ], JSON_UNESCAPED_UNICODE);
+
+        resposta_json([
+            "status" => "tempo_acabou",
+            "acertou" => (intval($resposta['correta']) === 1),
+            "pontos" => intval($pontos),
+            "resposta_correta" => $posicao_correta,
+            "sua_resposta" => intval($sua_resposta)
+        ]);
     } else {
-        echo json_encode([
-            "status" => "ok",
-            "tempo_acabou" => true,
+        resposta_json([
+            "status" => "tempo_acabou",
             "acertou" => false,
             "pontos" => 0,
-            "resposta_correta" => $resposta_correta,
-            "alternativa_escolhida" => 0
-        ], JSON_UNESCAPED_UNICODE);
+            "resposta_correta" => $posicao_correta,
+            "sua_resposta" => 0
+        ]);
     }
 }
 
-function limparPergunta($conn, $id_sala, $id_jogador) {
+function proximaPergunta($conn, $id_sala, $id_jogador) {
     $stmt = $conn->prepare("SELECT is_host FROM jogadores WHERE id_jogador = ? AND id_sala = ?");
     $stmt->bind_param("ii", $id_jogador, $id_sala);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $jogador = $result->fetch_assoc();
-    
-    if ($jogador['is_host'] != 1) {
-        echo json_encode(["status" => "erro", "mensagem" => "Apenas o host pode avancar"], JSON_UNESCAPED_UNICODE);
-        return;
+    $jog = $stmt->get_result()->fetch_assoc();
+    if (!$jog || intval($jog['is_host']) !== 1) {
+        resposta_json(["erro" => "Apenas o host pode avançar"]);
     }
-    
+
+    $stmt = $conn->prepare("SELECT rodada_atual, rodadas FROM salas WHERE id_sala = ?");
+    $stmt->bind_param("i", $id_sala);
+    $stmt->execute();
+    $sala = $stmt->get_result()->fetch_assoc();
+    if (!$sala) resposta_json(["erro" => "Sala inválida"]);
+
+    $rodada_atual = intval($sala['rodada_atual']);
+    $rodadas = intval($sala['rodadas']);
+    if ($rodada_atual >= $rodadas) {
+        resposta_json(["status" => "fim_jogo"]);
+    }
+
     $stmt = $conn->prepare("
-        UPDATE salas 
-        SET id_pergunta_atual = NULL, 
-            alternativas_ordem = NULL, 
-            tempo_inicio_pergunta = NULL 
+        UPDATE salas
+        SET id_pergunta_atual = NULL, alternativas_ordem = NULL, tempo_inicio_pergunta = NULL
         WHERE id_sala = ?
     ");
     $stmt->bind_param("i", $id_sala);
     $stmt->execute();
-    
-    echo json_encode(["status" => "ok"], JSON_UNESCAPED_UNICODE);
+
+    resposta_json(["status" => "ok"]);
 }
 ?>

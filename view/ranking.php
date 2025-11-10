@@ -56,6 +56,8 @@ $stmt->execute();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="../public/style/ranking.css">
+        <link rel="icon" href="../public/img/icon.png">
+
 </head>
 <body class="body-ranking">
     <div class="container-ranking">
