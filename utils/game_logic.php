@@ -188,7 +188,6 @@ function buscar_pergunta($conn) {
     
     if ($tempo_restante < 0) $tempo_restante = 0;
 
-    // Verificar se jogador já respondeu
     $ja_respondeu = false;
     if ($id_jogador) {
         $stmt = $conn->prepare("
@@ -201,7 +200,6 @@ function buscar_pergunta($conn) {
         $ja_respondeu = $stmt->get_result()->num_rows > 0;
     }
 
-    // Pegar alternativas embaralhadas
     $alternativas = json_decode($sala['alternativas_ordem'], true);
 
     resposta_json([
@@ -218,7 +216,6 @@ function buscar_pergunta($conn) {
     ]);
 }
 
-// JOGADOR ENVIA RESPOSTA
 function enviar_resposta($conn) {
     $codigo_sala = $_POST['codigo_sala'] ?? '';
     $id_jogador = $_POST['id_jogador'] ?? 0;
@@ -228,7 +225,6 @@ function enviar_resposta($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Dados incompletos"]);
     }
 
-    // Buscar sala
     $stmt = $conn->prepare("SELECT * FROM salas WHERE codigo_sala = ?");
     $stmt->bind_param("s", $codigo_sala);
     $stmt->execute();
@@ -242,7 +238,6 @@ function enviar_resposta($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Nenhuma pergunta ativa"]);
     }
 
-    // Calcular tempo de resposta
     $stmt = $conn->prepare("
         SELECT 
             UNIX_TIMESTAMP(tempo_inicio_pergunta) as inicio,
@@ -255,12 +250,10 @@ function enviar_resposta($conn) {
 
     $tempo_resposta = $tempos['agora'] - $tempos['inicio'];
 
-    // Verificar se tempo não expirou
     if ($tempo_resposta > $sala['tempo_resposta']) {
         resposta_json(["status" => "erro", "mensagem" => "Tempo esgotado"]);
     }
 
-    // Verificar se já respondeu
     $stmt = $conn->prepare("
         SELECT id_resposta 
         FROM respostas 
@@ -273,7 +266,6 @@ function enviar_resposta($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Você já respondeu esta pergunta"]);
     }
 
-    // Buscar resposta correta da pergunta
     $stmt = $conn->prepare("
         SELECT alternativa1 
         FROM perguntas 
@@ -283,23 +275,17 @@ function enviar_resposta($conn) {
     $stmt->execute();
     $pergunta = $stmt->get_result()->fetch_assoc();
 
-    // Pegar alternativas embaralhadas
     $alternativas = json_decode($sala['alternativas_ordem'], true);
-    
-    // A alternativa correta é a alternativa1 do banco
-    // Descobrir em que posição ela está no array embaralhado
+
     $posicao_correta = array_search($pergunta['alternativa1'], $alternativas) + 1;
 
-    // Verificar se acertou
     $acertou = ($alternativa == $posicao_correta);
 
-    // Calcular pontos
     $pontos = 0;
     if ($acertou) {
         $pontos = calcular_pontos($tempo_resposta, $sala['tempo_resposta']);
     }
 
-    // Salvar resposta
     $stmt = $conn->prepare("
         INSERT INTO respostas (id_jogador, id_pergunta, resposta_escolhida, correta, tempo_resposta) 
         VALUES (?, ?, ?, ?, ?)
@@ -308,7 +294,6 @@ function enviar_resposta($conn) {
     $stmt->bind_param("iisii", $id_jogador, $sala['id_pergunta_atual'], $resposta_escolhida, $acertou, $tempo_resposta);
     $stmt->execute();
 
-    // Atualizar pontos do jogador
     if ($acertou) {
         $stmt = $conn->prepare("
             UPDATE jogadores 
@@ -326,7 +311,6 @@ function enviar_resposta($conn) {
     ]);
 }
 
-// VERIFICAR SE O TEMPO ACABOU
 function verificar_tempo($conn) {
     $codigo_sala = $_POST['codigo_sala'] ?? $_GET['codigo_sala'] ?? '';
 
@@ -334,7 +318,6 @@ function verificar_tempo($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Código da sala obrigatório"]);
     }
 
-    // Buscar sala
     $stmt = $conn->prepare("SELECT * FROM salas WHERE codigo_sala = ?");
     $stmt->bind_param("s", $codigo_sala);
     $stmt->execute();
@@ -351,7 +334,6 @@ function verificar_tempo($conn) {
         ]);
     }
 
-    // Calcular tempo restante
     $stmt = $conn->prepare("
         SELECT 
             UNIX_TIMESTAMP(tempo_inicio_pergunta) as inicio,
@@ -368,7 +350,6 @@ function verificar_tempo($conn) {
     if ($tempo_restante < 0) $tempo_restante = 0;
 
     if ($tempo_restante == 0) {
-        // Tempo acabou - enviar resposta correta
         $stmt = $conn->prepare("
             SELECT alternativa1 
             FROM perguntas 
@@ -378,10 +359,8 @@ function verificar_tempo($conn) {
         $stmt->execute();
         $pergunta = $stmt->get_result()->fetch_assoc();
 
-        // Pegar alternativas embaralhadas
         $alternativas = json_decode($sala['alternativas_ordem'], true);
         
-        // Descobrir posição da correta
         $posicao_correta = array_search($pergunta['alternativa1'], $alternativas) + 1;
 
         resposta_json([
