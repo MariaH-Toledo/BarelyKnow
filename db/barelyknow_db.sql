@@ -67,6 +67,7 @@ ALTER TABLE salas ADD COLUMN id_pergunta_atual INT DEFAULT NULL;
 ALTER TABLE salas ADD COLUMN tempo_inicio_pergunta TIMESTAMP NULL;
 ALTER TABLE salas ADD COLUMN alternativas_ordem TEXT NULL;
 
+
 INSERT INTO perguntas (id_categoria, pergunta, alternativa1, alternativa2, alternativa3, alternativa4) VALUES
 (1, 'Quantos jogadores formam um time de futebol em campo?', '11 jogadores', '10 jogadores', '9 jogadores', '12 jogadores'),
 (1, 'Qual país ganhou mais Copas do Mundo?', 'Brasil', 'Alemanha', 'Itália', 'Argentina'),

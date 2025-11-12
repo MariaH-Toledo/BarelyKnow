@@ -3,7 +3,6 @@ session_start();
 header("Content-Type: application/json; charset=utf-8");
 include_once __DIR__ . "/../db/conexao.php";
 
-// Constantes para pontuação
 define('PONTOS_MAX', 1000);
 define('PONTOS_MIN', 0);
 
@@ -13,8 +12,6 @@ function resposta_json($arr) {
 }
 
 function calcular_pontos($tempo_resposta, $tempo_total) {
-    // Quanto mais rápido responder, mais pontos
-    // 0 segundos = 1000 pontos, tempo_total segundos = 0 pontos
     $porcentagem_tempo = $tempo_resposta / $tempo_total;
     $pontos = PONTOS_MAX * (1 - $porcentagem_tempo);
     return max(PONTOS_MIN, intval($pontos));
@@ -35,11 +32,13 @@ switch ($acao) {
     case 'verificar_tempo':
         verificar_tempo($conn);
         break;
+    case 'verificar_fim_jogo':
+        verificar_fim_jogo($conn);
+        break;
     default:
         resposta_json(["status" => "erro", "mensagem" => "Ação inválida"]);
 }
 
-// HOST INICIA A PRÓXIMA PERGUNTA
 function iniciar_proxima($conn) {
     $codigo_sala = $_POST['codigo_sala'] ?? '';
     $id_jogador = $_POST['id_jogador'] ?? 0;
@@ -48,7 +47,6 @@ function iniciar_proxima($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Dados incompletos"]);
     }
 
-    // Buscar sala
     $stmt = $conn->prepare("SELECT * FROM salas WHERE codigo_sala = ?");
     $stmt->bind_param("s", $codigo_sala);
     $stmt->execute();
@@ -58,41 +56,66 @@ function iniciar_proxima($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Sala não encontrada"]);
     }
 
-    // Verificar se é o host
     $stmt = $conn->prepare("SELECT is_host FROM jogadores WHERE id_jogador = ? AND id_sala = ?");
     $stmt->bind_param("ii", $id_jogador, $sala['id_sala']);
     $stmt->execute();
     $jogador = $stmt->get_result()->fetch_assoc();
 
-    if (!$jogador || $jogador['is_host'] != 1) {
-        resposta_json(["status" => "erro", "mensagem" => "Apenas o host pode iniciar"]);
+    if (!$jogador) {
+        resposta_json(["status" => "erro", "mensagem" => "Jogador não encontrado na sala"]);
     }
 
-    // Verificar se acabaram as rodadas
+    if ($jogador['is_host'] != 1) {
+        resposta_json(["status" => "erro", "mensagem" => "Apenas o host pode iniciar perguntas"]);
+    }
+
     if ($sala['rodada_atual'] >= $sala['rodadas']) {
-        resposta_json(["status" => "fim_jogo"]);
+        $stmt = $conn->prepare("UPDATE salas SET status = 'finalizada' WHERE id_sala = ?");
+        $stmt->bind_param("i", $sala['id_sala']);
+        $stmt->execute();
+        
+        resposta_json([
+            "status" => "fim_jogo",
+            "mensagem" => "Jogo finalizado! Redirecionando para o ranking..."
+        ]);
     }
 
-    // Incrementar rodada
     $nova_rodada = $sala['rodada_atual'] + 1;
 
-    // Buscar uma pergunta aleatória da categoria
     $stmt = $conn->prepare("
-        SELECT id_pergunta, pergunta, alternativa1, alternativa2, alternativa3, alternativa4 
-        FROM perguntas 
-        WHERE id_categoria = ? 
+        SELECT p.id_pergunta, p.pergunta, p.alternativa1, p.alternativa2, p.alternativa3, p.alternativa4 
+        FROM perguntas p
+        WHERE p.id_categoria = ? 
+        AND p.id_pergunta NOT IN (
+            SELECT DISTINCT r.id_pergunta 
+            FROM respostas r 
+            INNER JOIN jogadores j ON r.id_jogador = j.id_jogador 
+            WHERE j.id_sala = ?
+        )
         ORDER BY RAND() 
         LIMIT 1
     ");
-    $stmt->bind_param("i", $sala['id_categoria']);
+    $stmt->bind_param("ii", $sala['id_categoria'], $sala['id_sala']);
     $stmt->execute();
     $pergunta = $stmt->get_result()->fetch_assoc();
+
+    if (!$pergunta) {
+        $stmt = $conn->prepare("
+            SELECT id_pergunta, pergunta, alternativa1, alternativa2, alternativa3, alternativa4 
+            FROM perguntas 
+            WHERE id_categoria = ? 
+            ORDER BY RAND() 
+            LIMIT 1
+        ");
+        $stmt->bind_param("i", $sala['id_categoria']);
+        $stmt->execute();
+        $pergunta = $stmt->get_result()->fetch_assoc();
+    }
 
     if (!$pergunta) {
         resposta_json(["status" => "erro", "mensagem" => "Nenhuma pergunta disponível"]);
     }
 
-    // Embaralhar alternativas
     $alternativas = [
         $pergunta['alternativa1'],
         $pergunta['alternativa2'],
@@ -100,19 +123,12 @@ function iniciar_proxima($conn) {
         $pergunta['alternativa4']
     ];
     
-    // A primeira alternativa é sempre a correta no banco
     $resposta_correta = $alternativas[0];
-    
-    // Embaralhar
     shuffle($alternativas);
-    
-    // Descobrir nova posição da correta
     $nova_posicao_correta = array_search($resposta_correta, $alternativas) + 1;
 
-    // Salvar ordem embaralhada
-    $ordem_json = json_encode($alternativas);
+    $ordem_json = json_encode($alternativas, JSON_UNESCAPED_UNICODE);
 
-    // Atualizar sala com nova pergunta e reiniciar timer
     $stmt = $conn->prepare("
         UPDATE salas 
         SET rodada_atual = ?, 
@@ -128,14 +144,13 @@ function iniciar_proxima($conn) {
             "status" => "ok",
             "mensagem" => "Pergunta iniciada",
             "rodada_atual" => $nova_rodada,
-            "posicao_correta" => $nova_posicao_correta // Para salvar no banco depois
+            "posicao_correta" => $nova_posicao_correta
         ]);
     } else {
-        resposta_json(["status" => "erro", "mensagem" => "Erro ao iniciar pergunta"]);
+        resposta_json(["status" => "erro", "mensagem" => "Erro ao iniciar pergunta: " . $conn->error]);
     }
 }
 
-// JOGADORES BUSCAM A PERGUNTA ATUAL
 function buscar_pergunta($conn) {
     $codigo_sala = $_POST['codigo_sala'] ?? $_GET['codigo_sala'] ?? '';
     $id_jogador = $_POST['id_jogador'] ?? $_GET['id_jogador'] ?? 0;
@@ -144,7 +159,6 @@ function buscar_pergunta($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Código da sala obrigatório"]);
     }
 
-    // Buscar sala
     $stmt = $conn->prepare("SELECT * FROM salas WHERE codigo_sala = ?");
     $stmt->bind_param("s", $codigo_sala);
     $stmt->execute();
@@ -154,7 +168,13 @@ function buscar_pergunta($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Sala não encontrada"]);
     }
 
-    // Se não há pergunta iniciada ainda
+    if ($sala['status'] === 'finalizada' || $sala['rodada_atual'] >= $sala['rodadas']) {
+        resposta_json([
+            "status" => "fim_jogo",
+            "mensagem" => "Jogo finalizado!"
+        ]);
+    }
+
     if (!$sala['id_pergunta_atual'] || !$sala['tempo_inicio_pergunta']) {
         resposta_json([
             "status" => "aguardando",
@@ -162,7 +182,6 @@ function buscar_pergunta($conn) {
         ]);
     }
 
-    // Buscar pergunta
     $stmt = $conn->prepare("SELECT pergunta FROM perguntas WHERE id_pergunta = ?");
     $stmt->bind_param("i", $sala['id_pergunta_atual']);
     $stmt->execute();
@@ -172,7 +191,6 @@ function buscar_pergunta($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Pergunta não encontrada"]);
     }
 
-    // Calcular tempo restante
     $stmt = $conn->prepare("
         SELECT 
             UNIX_TIMESTAMP(tempo_inicio_pergunta) as inicio,
@@ -219,7 +237,7 @@ function buscar_pergunta($conn) {
 function enviar_resposta($conn) {
     $codigo_sala = $_POST['codigo_sala'] ?? '';
     $id_jogador = $_POST['id_jogador'] ?? 0;
-    $alternativa = intval($_POST['alternativa'] ?? 0); // 1, 2, 3 ou 4
+    $alternativa = intval($_POST['alternativa'] ?? 0);
 
     if (empty($codigo_sala) || !$id_jogador || !$alternativa) {
         resposta_json(["status" => "erro", "mensagem" => "Dados incompletos"]);
@@ -230,12 +248,8 @@ function enviar_resposta($conn) {
     $stmt->execute();
     $sala = $stmt->get_result()->fetch_assoc();
 
-    if (!$sala) {
-        resposta_json(["status" => "erro", "mensagem" => "Sala não encontrada"]);
-    }
-
-    if (!$sala['id_pergunta_atual']) {
-        resposta_json(["status" => "erro", "mensagem" => "Nenhuma pergunta ativa"]);
+    if (!$sala || !$sala['id_pergunta_atual']) {
+        resposta_json(["status" => "erro", "mensagem" => "Pergunta não encontrada"]);
     }
 
     $stmt = $conn->prepare("
@@ -250,7 +264,7 @@ function enviar_resposta($conn) {
 
     $tempo_resposta = $tempos['agora'] - $tempos['inicio'];
 
-    if ($tempo_resposta > $sala['tempo_resposta']) {
+    if ($tempo_resposta > ($sala['tempo_resposta'] + 5)) {
         resposta_json(["status" => "erro", "mensagem" => "Tempo esgotado"]);
     }
 
@@ -266,23 +280,18 @@ function enviar_resposta($conn) {
         resposta_json(["status" => "erro", "mensagem" => "Você já respondeu esta pergunta"]);
     }
 
-    $stmt = $conn->prepare("
-        SELECT alternativa1 
-        FROM perguntas 
-        WHERE id_pergunta = ?
-    ");
+    $stmt = $conn->prepare("SELECT alternativa1 FROM perguntas WHERE id_pergunta = ?");
     $stmt->bind_param("i", $sala['id_pergunta_atual']);
     $stmt->execute();
     $pergunta = $stmt->get_result()->fetch_assoc();
 
     $alternativas = json_decode($sala['alternativas_ordem'], true);
-
     $posicao_correta = array_search($pergunta['alternativa1'], $alternativas) + 1;
 
     $acertou = ($alternativa == $posicao_correta);
 
     $pontos = 0;
-    if ($acertou) {
+    if ($acertou && $tempo_resposta <= $sala['tempo_resposta']) {
         $pontos = calcular_pontos($tempo_resposta, $sala['tempo_resposta']);
     }
 
@@ -294,12 +303,8 @@ function enviar_resposta($conn) {
     $stmt->bind_param("iisii", $id_jogador, $sala['id_pergunta_atual'], $resposta_escolhida, $acertou, $tempo_resposta);
     $stmt->execute();
 
-    if ($acertou) {
-        $stmt = $conn->prepare("
-            UPDATE jogadores 
-            SET pontos = pontos + ? 
-            WHERE id_jogador = ?
-        ");
+    if ($acertou && $pontos > 0) {
+        $stmt = $conn->prepare("UPDATE jogadores SET pontos = pontos + ? WHERE id_jogador = ?");
         $stmt->bind_param("ii", $pontos, $id_jogador);
         $stmt->execute();
     }
@@ -307,7 +312,10 @@ function enviar_resposta($conn) {
     resposta_json([
         "status" => "ok",
         "mensagem" => "Resposta registrada",
-        "tempo_resposta" => $tempo_resposta
+        "acertou" => $acertou,
+        "pontos" => $pontos,
+        "tempo_resposta" => $tempo_resposta,
+        "posicao_correta" => $posicao_correta
     ]);
 }
 
@@ -328,10 +336,7 @@ function verificar_tempo($conn) {
     }
 
     if (!$sala['tempo_inicio_pergunta']) {
-        resposta_json([
-            "status" => "aguardando",
-            "tempo_restante" => 0
-        ]);
+        resposta_json(["status" => "aguardando", "tempo_restante" => 0]);
     }
 
     $stmt = $conn->prepare("
@@ -349,18 +354,13 @@ function verificar_tempo($conn) {
     
     if ($tempo_restante < 0) $tempo_restante = 0;
 
-    if ($tempo_restante == 0) {
-        $stmt = $conn->prepare("
-            SELECT alternativa1 
-            FROM perguntas 
-            WHERE id_pergunta = ?
-        ");
+    if ($tempo_restante <= 0) {
+        $stmt = $conn->prepare("SELECT alternativa1 FROM perguntas WHERE id_pergunta = ?");
         $stmt->bind_param("i", $sala['id_pergunta_atual']);
         $stmt->execute();
         $pergunta = $stmt->get_result()->fetch_assoc();
 
         $alternativas = json_decode($sala['alternativas_ordem'], true);
-        
         $posicao_correta = array_search($pergunta['alternativa1'], $alternativas) + 1;
 
         resposta_json([
@@ -373,6 +373,36 @@ function verificar_tempo($conn) {
             "status" => "andamento",
             "tempo_restante" => intval($tempo_restante),
             "timestamp_servidor" => intval($tempos['agora'])
+        ]);
+    }
+}
+
+function verificar_fim_jogo($conn) {
+    $codigo_sala = $_POST['codigo_sala'] ?? $_GET['codigo_sala'] ?? '';
+
+    if (empty($codigo_sala)) {
+        resposta_json(["status" => "erro", "mensagem" => "Código da sala obrigatório"]);
+    }
+
+    $stmt = $conn->prepare("SELECT status, rodada_atual, rodadas FROM salas WHERE codigo_sala = ?");
+    $stmt->bind_param("s", $codigo_sala);
+    $stmt->execute();
+    $sala = $stmt->get_result()->fetch_assoc();
+
+    if (!$sala) {
+        resposta_json(["status" => "erro", "mensagem" => "Sala não encontrada"]);
+    }
+
+    if ($sala['status'] === 'finalizada' || $sala['rodada_atual'] >= $sala['rodadas']) {
+        resposta_json([
+            "status" => "fim_jogo",
+            "mensagem" => "Jogo finalizado!"
+        ]);
+    } else {
+        resposta_json([
+            "status" => "andamento",
+            "rodada_atual" => $sala['rodada_atual'],
+            "total_rodadas" => $sala['rodadas']
         ]);
     }
 }

@@ -56,8 +56,7 @@ $eh_host = ($jogador['is_host'] == 1);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="../public/style/game.css">
-        <link rel="icon" href="../public/img/icon.png">
-
+    <link rel="icon" href="../public/img/icon.png">
 </head>
 <body class="body-game">
     <div class="container-game">
@@ -138,48 +137,18 @@ $eh_host = ($jogador['is_host'] == 1);
         let intervaloTempo = null;
         let intervaloBuscar = null;
         let tempoRestante = 0;
+        let tentativasErro = 0;
+        let ultimaPerguntaId = null;
 
-        // INICIAR: Buscar pergunta atual ou aguardar
         async function iniciar() {
-            if (ehHost) {
-                // Host precisa iniciar a primeira pergunta
-                await carregarProximaPergunta();
-            } else {
-                // Jogadores aguardam host iniciar
-                aguardarPergunta();
-            }
-        }
-
-        // HOST CARREGA PRÓXIMA PERGUNTA
-        async function carregarProximaPergunta() {
-            try {
-                const formData = new FormData();
-                formData.append('acao', 'iniciar_proxima');
-                formData.append('codigo_sala', codigoSala);
-                formData.append('id_jogador', idJogador);
+            console.log('🎮 Iniciando jogo');
+            console.log('👤 ID Jogador:', idJogador);
+            console.log('👑 É Host:', ehHost);
+            console.log('🚪 Sala:', codigoSala);
             
-                const response = await fetch('../utils/game_logic.php', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (data.status === 'ok') {
-                    // Pergunta iniciada com sucesso
-                    setTimeout(() => buscarPergunta(), 500);
-                } else if (data.status === 'fim_jogo') {
-                    // Acabaram as perguntas
-                    window.location.href = `ranking.php?codigo=${codigoSala}`;
-                } else {
-                    console.error('Erro ao iniciar pergunta:', data.mensagem);
-                }
-            } catch (error) {
-                console.error('Erro ao carregar próxima:', error);
-            }
+            await buscarPergunta();
         }
 
-        // BUSCAR PERGUNTA ATUAL
         async function buscarPergunta() {
             try {
                 const formData = new FormData();
@@ -193,91 +162,172 @@ $eh_host = ($jogador['is_host'] == 1);
                 });
 
                 const data = await response.json();
+                console.log('📩 Buscar pergunta:', data);
 
                 if (data.status === 'ok') {
-                    if (intervaloBuscar) {
-                        clearInterval(intervaloBuscar);
-                        intervaloBuscar = null;
+                    tentativasErro = 0;
+                    
+                    const perguntaId = `${data.rodada_atual}-${data.pergunta}`;
+                    
+                    if (perguntaId !== ultimaPerguntaId) {
+                        console.log('🆕 Nova pergunta detectada!');
+                        ultimaPerguntaId = perguntaId;
+                        
+                        if (intervaloBuscar) {
+                            clearInterval(intervaloBuscar);
+                            intervaloBuscar = null;
+                        }
+                        
+                        mostrarPergunta(data);
+                        return true;
+                    } else {
+                        console.log('⏳ Mesma pergunta, aguardando...');
+                        return false;
                     }
-                    mostrarPergunta(data);
+                    
                 } else if (data.status === 'aguardando') {
-                    // Continuar aguardando
-                    if (!intervaloBuscar) {
+                    console.log('⏳ Aguardando:', data.mensagem);
+                    
+                    if (ehHost && !perguntaAtual) {
+                        console.log('👑 Host iniciando primeira pergunta...');
+                        await carregarProximaPergunta();
+                    } else {
                         aguardarPergunta();
                     }
+                    return false;
+                    
+                } else if (data.status === 'fim_jogo') {
+                    console.log('🏁 Jogo finalizado! Redirecionando...');
+                    
+                    if (intervaloTempo) clearInterval(intervaloTempo);
+                    if (intervaloBuscar) clearInterval(intervaloBuscar);
+                    
+                    setTimeout(() => {
+                        window.location.href = `ranking.php?codigo=${codigoSala}`;
+                    }, 500);
+                    return false;
                 }
             } catch (error) {
-                console.error('Erro ao buscar pergunta:', error);
+                console.error('❌ Erro ao buscar pergunta:', error);
+                tentativasErro++;
+                
+                if (tentativasErro >= 5) {
+                    alert('Erro de conexão persistente. Recarregue a página.');
+                    tentativasErro = 0;
+                }
+                return false;
             }
         }
 
-        // AGUARDAR HOST INICIAR PERGUNTA
         function aguardarPergunta() {
             document.getElementById('perguntaTexto').textContent = 'Aguardando host iniciar a pergunta...';
             document.getElementById('perguntaAtual').textContent = 'Aguardando...';
 
             const botoes = document.querySelectorAll('.btn-alternativa');
-            botoes.forEach(btn => btn.disabled = true);
+            botoes.forEach(btn => {
+                btn.disabled = true;
+                btn.classList.remove('correta', 'incorreta', 'selecionada');
+            });
 
-            // Verificar a cada 2 segundos
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`alt${i}`).textContent = '-';
+            }
+
             if (!intervaloBuscar) {
+                console.log('⏳ Iniciando polling de perguntas (a cada 2s)');
                 intervaloBuscar = setInterval(() => buscarPergunta(), 2000);
             }
         }
 
-        // MOSTRAR PERGUNTA NA TELA
+        async function carregarProximaPergunta() {
+            if (!ehHost) {
+                console.log('⚠️ Tentativa de carregar pergunta por não-host bloqueada');
+                return;
+            }
+
+            try {
+                console.log('👑 HOST: Carregando próxima pergunta...');
+                
+                const formData = new FormData();
+                formData.append('acao', 'iniciar_proxima');
+                formData.append('codigo_sala', codigoSala);
+                formData.append('id_jogador', idJogador);
+            
+                const response = await fetch('../utils/game_logic.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log('📨 Resposta iniciar_proxima:', data);
+
+                if (data.status === 'ok') {
+                    console.log('✅ Pergunta iniciada, aguardando 1s para buscar...');
+                    setTimeout(() => buscarPergunta(), 1000);
+                    
+                } else if (data.status === 'fim_jogo') {
+                    console.log('🏁 Fim do jogo detectado!');
+                    
+                    if (intervaloTempo) clearInterval(intervaloTempo);
+                    if (intervaloBuscar) clearInterval(intervaloBuscar);
+                    
+                    setTimeout(() => {
+                        window.location.href = `ranking.php?codigo=${codigoSala}`;
+                    }, 500);
+                    
+                } else {
+                    console.error('❌ Erro ao iniciar pergunta:', data.mensagem);
+                    alert('Erro: ' + data.mensagem);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar próxima:', error);
+            }
+        }
+
         function mostrarPergunta(data) {
+            console.log('📝 Mostrando pergunta:', data);
+            
             perguntaAtual = data;
             respostaEscolhida = null;
 
-            // Esconder feedback se estiver visível
             document.getElementById('feedbackContainer').style.display = 'none';
 
-            // Atualizar cabeçalho
             document.getElementById('perguntaAtual').textContent = 
                 `Pergunta ${data.rodada_atual} de ${data.total_rodadas}`;
 
-            // Mostrar pergunta
             document.getElementById('perguntaTexto').textContent = data.pergunta;
 
-            // Mostrar alternativas
             for (let i = 0; i < 4; i++) {
                 document.getElementById(`alt${i + 1}`).textContent = data.alternativas[i];
             }
 
-            // Resetar botões
             const botoes = document.querySelectorAll('.btn-alternativa');
             botoes.forEach(btn => {
                 btn.disabled = data.ja_respondeu;
                 btn.classList.remove('correta', 'incorreta', 'selecionada');
             });
 
-            // Se já respondeu, marcar como respondida
             if (data.ja_respondeu) {
+                console.log('⚠️ Jogador já respondeu esta pergunta');
                 respostaEscolhida = -1;
             }
 
-            // Iniciar timer
             tempoRestante = data.tempo_restante;
             iniciarTimer(data.tempo_total, data.tempo_restante);
         }
 
-        // CONTROLAR TIMER
         function iniciarTimer(tempoTotal, tempoInicial) {
             const tempoBar = document.getElementById('tempoBar');
             const tempoTexto = document.getElementById('tempoTexto');
 
             tempoRestante = tempoInicial;
 
-            // Limpar intervalo anterior se existir
             if (intervaloTempo) {
                 clearInterval(intervaloTempo);
             }
 
-            // Atualizar display inicial
             atualizarDisplay();
 
-            // Atualizar a cada segundo
             intervaloTempo = setInterval(() => {
                 tempoRestante--;
 
@@ -285,6 +335,7 @@ $eh_host = ($jogador['is_host'] == 1);
                     tempoRestante = 0;
                     clearInterval(intervaloTempo);
                     intervaloTempo = null;
+                    console.log('⏰ Tempo esgotado!');
                     verificarSeAcabou();
                 }
 
@@ -296,7 +347,6 @@ $eh_host = ($jogador['is_host'] == 1);
                 tempoBar.style.width = `${porcentagem}%`;
                 tempoTexto.textContent = `${tempoRestante}s`;
 
-                // Mudar cor quando estiver acabando
                 if (tempoRestante <= 5) {
                     tempoBar.style.backgroundColor = '#ff66bc';
                 } else if (tempoRestante <= 10) {
@@ -307,25 +357,26 @@ $eh_host = ($jogador['is_host'] == 1);
             }
         }
 
-        // JOGADOR ESCOLHE RESPOSTA
         async function responder(alternativa) {
-            // Não permitir responder duas vezes
-            if (respostaEscolhida !== null) return;
+            if (respostaEscolhida !== null) {
+                console.log('⚠️ Já respondeu');
+                return;
+            }
 
-            // Não permitir responder se tempo acabou
-            if (tempoRestante <= 0) return;
+            if (tempoRestante <= 0) {
+                console.log('⚠️ Tempo esgotado');
+                return;
+            }
 
+            console.log('✅ Resposta escolhida:', alternativa);
             respostaEscolhida = alternativa;
 
-            // Marcar botão escolhido
             const botaoEscolhido = document.querySelector(`[data-alternativa="${alternativa}"]`);
             botaoEscolhido.classList.add('selecionada');
 
-            // Desabilitar todos os botões
             const botoes = document.querySelectorAll('.btn-alternativa');
             botoes.forEach(btn => btn.disabled = true);
 
-            // Enviar resposta para o servidor
             try {
                 const formData = new FormData();
                 formData.append('acao', 'enviar_resposta');
@@ -339,16 +390,16 @@ $eh_host = ($jogador['is_host'] == 1);
                 });
 
                 const data = await response.json();
+                console.log('📨 Resposta enviada:', data);
 
                 if (data.status !== 'ok') {
-                    console.error('Erro ao enviar resposta:', data.mensagem);
+                    console.error('❌ Erro ao enviar:', data.mensagem);
                 }
             } catch (error) {
-                console.error('Erro ao enviar resposta:', error);
+                console.error('❌ Erro ao enviar resposta:', error);
             }
         }
 
-        // VERIFICAR SE TEMPO ACABOU
         async function verificarSeAcabou() {
             try {
                 const formData = new FormData();
@@ -361,83 +412,137 @@ $eh_host = ($jogador['is_host'] == 1);
                 });
 
                 const data = await response.json();
+                console.log('⏰ Verificar tempo:', data);
 
                 if (data.status === 'tempo_acabou') {
                     mostrarFeedback(data.resposta_correta);
                 }
             } catch (error) {
-                console.error('Erro ao verificar tempo:', error);
+                console.error('❌ Erro ao verificar tempo:', error);
             }
         }
 
-        // MOSTRAR FEEDBACK (ACERTOU OU ERROU)
         function mostrarFeedback(respostaCorreta) {
-            // Parar timer
+            console.log('📊 Mostrando feedback. Correta:', respostaCorreta);
+            
             if (intervaloTempo) {
                 clearInterval(intervaloTempo);
                 intervaloTempo = null;
             }
 
-            // Marcar alternativa correta
             const botoes = document.querySelectorAll('.btn-alternativa');
             botoes.forEach((btn, index) => {
                 const numeroAlternativa = index + 1;
-
                 btn.disabled = true;
 
-                // Marcar a correta
                 if (numeroAlternativa === respostaCorreta) {
                     btn.classList.add('correta');
                 }
 
-                // Marcar a escolhida errada (se errou)
                 if (respostaEscolhida && numeroAlternativa === respostaEscolhida && respostaEscolhida !== respostaCorreta) {
                     btn.classList.add('incorreta');
                 }
             });
 
-            // Preparar mensagem de feedback
             const feedbackContainer = document.getElementById('feedbackContainer');
             const feedbackTitulo = document.getElementById('feedbackTitulo');
             const feedbackMensagem = document.getElementById('feedbackMensagem');
             const btnProxima = document.getElementById('btnProxima');
 
             if (respostaEscolhida === null) {
-                // Não respondeu
                 feedbackTitulo.textContent = '⏰ Tempo esgotado!';
                 feedbackMensagem.textContent = 'Você não respondeu a tempo.';
             } else if (respostaEscolhida === respostaCorreta) {
-                // Acertou
                 feedbackTitulo.textContent = '🎉 Correto!';
                 feedbackMensagem.textContent = 'Parabéns! Você acertou!';
             } else {
-                // Errou
                 feedbackTitulo.textContent = '❌ Incorreto!';
                 feedbackMensagem.textContent = 'Não foi dessa vez. Continue tentando!';
             }
 
-            // Mostrar ou esconder botão de próxima
             if (ehHost) {
                 btnProxima.style.display = 'inline-block';
+                btnProxima.textContent = 'Próxima Pergunta';
+                console.log('👑 HOST: Botão de próxima habilitado');
+                
+                if (intervaloBuscar) {
+                    clearInterval(intervaloBuscar);
+                    intervaloBuscar = null;
+                }
             } else {
                 btnProxima.style.display = 'none';
                 feedbackMensagem.innerHTML += '<br><br><small>Aguardando host avançar...</small>';
-                // Jogadores ficam aguardando host avançar
-                intervaloBuscar = setInterval(() => buscarPergunta(), 2000);
+                
+                console.log('👤 NÃO-HOST: Iniciando polling para próxima pergunta');
+                
+                if (intervaloBuscar) {
+                    clearInterval(intervaloBuscar);
+                }
+                
+                perguntaAtual = null;
+                
+                intervaloBuscar = setInterval(async () => {
+                    console.log('🔄 Polling: Buscando próxima pergunta...');
+                    const encontrou = await buscarPergunta();
+                    
+                    if (encontrou) {
+                        console.log('✅ Polling: Nova pergunta encontrada!');
+                        if (intervaloBuscar) {
+                            clearInterval(intervaloBuscar);
+                            intervaloBuscar = null;
+                        }
+                    }
+                }, 1500);
             }
 
-            // Mostrar feedback
             feedbackContainer.style.display = 'flex';
         }
 
-        // HOST AVANÇA PARA PRÓXIMA PERGUNTA
         async function proximaPergunta() {
-            if (!ehHost) return;
+            if (!ehHost) {
+                console.log('⚠️ Não-host tentou avançar pergunta');
+                return;
+            }
 
+            console.log('👑 HOST: Avançando para próxima pergunta...');
+            
             document.getElementById('feedbackContainer').style.display = 'none';
+
+            if (intervaloBuscar) {
+                clearInterval(intervaloBuscar);
+                intervaloBuscar = null;
+            }
 
             await carregarProximaPergunta();
         }
+
+        async function verificarFimJogo() {
+            try {
+                const formData = new FormData();
+                formData.append('acao', 'verificar_fim_jogo');
+                formData.append('codigo_sala', codigoSala);
+            
+                const response = await fetch('../utils/game_logic.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'fim_jogo') {
+                    console.log('🏁 Fim detectado via polling!');
+                    
+                    if (intervaloTempo) clearInterval(intervaloTempo);
+                    if (intervaloBuscar) clearInterval(intervaloBuscar);
+                    
+                    window.location.href = `ranking.php?codigo=${codigoSala}`;
+                }
+            } catch (error) {
+                console.error('❌ Erro ao verificar fim:', error);
+            }
+        }
+
+        setInterval(verificarFimJogo, 10000);
 
         iniciar();
     </script>
